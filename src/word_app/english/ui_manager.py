@@ -154,7 +154,7 @@ class UIManager:
             ("/d, /del {word or phrase}", "Delete a word from the database. For this operation particular word is required."),
             ("/c, /conv", f"Start a chat {ROBOT_EMOJI} about the current word."),
             (f"/b, /bye (chat {ROBOT_EMOJI} mode only)", f"End the current chat session and return to training."),
-            ("? {question}", "Ask for more information about the current word (In guess mode)."),
+            ("? {question}", "Ask for more information about the current word (In a guess mode)."),
             ("{guess}", "Make a guess for the current word."),
         ]
 
