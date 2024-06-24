@@ -43,6 +43,7 @@ class BaseWordApp:
                 check = self.chat_mode(command)
                 if check == "quit":
                     break
+
             elif action == "show_all":
                 self.show_all(command)
             elif action == "show_categories":
@@ -144,6 +145,15 @@ class BaseWordApp:
                 return 'quit'
             answer = self.teacher.conversation(question)
             self.display_chat_answer(answer)
+        
+    def draw_stream(self, stream: Generator, mode: str = 'chat') -> str:
+        with Live(console=console, refresh_per_second=20) as live:
+            full_answer = f"{ROBOT_EMOJI} "
+            for chunk in stream:
+                token = chunk['message']['content'] if mode == 'chat' else chunk['response']
+                full_answer += token
+                self.ui_manager.update_converation_output(full_answer, live)
+            return full_answer
 
     def get_multiline_input(self) -> str:
         """Process a multiline input from the user."""
@@ -159,12 +169,8 @@ class BaseWordApp:
 
     def display_chat_answer(self, answer: Generator) -> None:
         """Live display of the chat answer."""
-        with Live(console=console, refresh_per_second=20) as live:
-            full_answer = "\U0001F916 "
-            for chunk in answer:
-                full_answer += chunk['message']['content']
-                self.ui_manager.update_converation_output(full_answer, live)
-            self.teacher.append_content(full_answer)
+        full_answer = self.draw_stream(answer)
+        self.teacher.append_content(full_answer)
 
     def print_categories(self) -> None:
         self.ui_manager.show_categories(console, self.word_manager)
@@ -281,11 +287,13 @@ class WordTrainer(BaseWordApp):
                 user_guess = console.input("[green]Your guess > ").strip().lower()
             if not user_guess:
                 continue
+
             user_guess = self.game_conversation(word, riddle, user_guess)
             if user_guess == "quit":
                 return "quit"
             if user_guess == "/q" or user_guess == "/bye":
                 return 'quit'
+            
             elif user_guess.startswith("/i"):
                 self.show_word_info(word.word)
                 continue
@@ -306,11 +314,7 @@ class WordTrainer(BaseWordApp):
             if check.strip().lower() in ["n", "no", "not ready", "not yet", "nope", "nah", "nay"]:
                 counter += 1
                 game = self.teacher.game_intro(counter)
-                with Live(console=console, refresh_per_second=20) as live:
-                    full_intro = f"{ROBOT_EMOJI} "
-                    for chunk in game:
-                        full_intro += chunk['response']
-                        self.ui_manager.update_converation_output(full_intro, live)
+                intro = self.draw_stream(game, mode='generate')
                 check = console.input("[green]Now? [white]> ")  
             elif check.strip().lower() == "/q":
                 return "quit"
@@ -325,11 +329,7 @@ class WordTrainer(BaseWordApp):
             self.teacher.append_content(riddle, role='assistant')
             while True :
                 answer = self.teacher.conversation(command)
-                with Live(console=console, refresh_per_second=20) as live:
-                    full_answer = f"{ROBOT_EMOJI} "
-                    for chunk in answer:
-                        full_answer += chunk['message']['content']
-                        self.ui_manager.update_converation_output(full_answer, live)
+                full_answer = self.draw_stream(answer, mode='chat')
                 check = console.input("[green]Your guess >")
                 if check == "/q":
                     return "quit"
