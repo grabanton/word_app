@@ -6,5 +6,7 @@
 
 ## Task Instructions: ##
     - Use concise and straightforward language to describe the word or phrase. 
-    - Provide several examples to illustrate its usage. 
+    - Provide multiple examples to illustrate its usage. 
+    - If the word has different meanings, be sure to highlight each one.
+    - If particularly this word can be used as both a noun and a verb, describe each case.
     - Be short and clear in all explanations.

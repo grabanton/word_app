@@ -65,11 +65,11 @@ class BaseWordApp:
         if command.startswith("/h"):
             return "", "help"
         elif command.startswith("/info"):
-            return command[5:].strip() or previous_command, "info"
+            return command[6:].strip() or previous_command, "info"
         elif command.startswith("/i"):
             return command[2:].strip() or previous_command, "info"
         elif command.startswith("/all"):
-            return command[4:], "show_all"
+            return command[5:], "show_all"
         elif command.startswith("/a"):
             return command[2:].strip(), "show_all"
         elif command.startswith("/cat"):
@@ -77,19 +77,19 @@ class BaseWordApp:
         elif command.startswith("/ct"):
             return "", "show_categories"
         elif command.startswith("/man"):
-            return command[7:].strip() or previous_command, "manual"
+            return command[5:].strip() or previous_command, "manual"
         elif command.startswith("/m"):
             return command[2:].strip() or previous_command, "manual"
         elif command.startswith("/conv"):
-            return command[13:].strip() or previous_command, "chat"
+            return command[6:].strip() or previous_command, "chat"
         elif command.startswith("/c"):
             return command[2:].strip() or previous_command, "chat"
         elif command.startswith("/upd"):
-            return command[7:].strip(), "update"
+            return command[5:].strip(), "update"
         elif command.startswith("/u"):
             return command[2:].strip(), "update"
         elif command.startswith("/del"):
-            return command[7:].strip(), "delete"
+            return command[5:].strip(), "delete"
         elif command.startswith("/d"):
             return command[2:].strip(), "delete"
         else:
@@ -147,12 +147,13 @@ class BaseWordApp:
             self.display_chat_answer(answer)
         
     def draw_stream(self, stream: Generator, mode: str = 'chat') -> str:
-        with Live(console=console, refresh_per_second=20) as live:
+        with Live(console=console, auto_refresh=False) as live:
             full_answer = f"{ROBOT_EMOJI} "
             for chunk in stream:
                 token = chunk['message']['content'] if mode == 'chat' else chunk['response']
                 full_answer += token
                 self.ui_manager.update_converation_output(full_answer, live)
+                live.refresh()
             return full_answer
 
     def get_multiline_input(self) -> str:
@@ -210,7 +211,7 @@ class WordDictionary(BaseWordApp):
 
     def process_new_word(self, layout: Layout, word: str, rewrite: bool) -> None:
         """Process a new word. Or rewrite an existing one."""
-        with Live(layout, console=console, refresh_per_second=4) as live:
+        with Live(layout, console=console, auto_refresh=False) as live:
             explanation_text, translation_text = self.generate_explanations(word, layout, live)
         warning = " ([red]Previous word data will be lost[white])" if rewrite else ""
         answer: str = console.input(f'Save the word?{warning} : [yellow]y [magenta]optional[white](category) or press Enter to skip > ')
@@ -229,12 +230,14 @@ class WordDictionary(BaseWordApp):
             explanation_text += chunk['response']
             self.ui_manager.update_left_panel(layout, explanation_text)
             live.update(layout)
+            live.refresh()
 
         translation = self.teacher.translator(explanation_text)
         for chunk in translation:
             translation_text += chunk['response']
             self.ui_manager.update_right_panel(layout, translation_text)
             live.update(layout)
+            live.refresh()
         
         return explanation_text, translation_text
 

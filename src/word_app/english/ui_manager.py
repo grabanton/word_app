@@ -218,7 +218,7 @@ class UIManager:
     def show_all_words(console: Console, manager: WordManager, category:str = None) -> None:
         header = f"{'Word':<80} {'Category':<15} {'State'}"
         words = manager.fetch_words(category=category)
-        words.sort(key=lambda w: w.state)
+        words.sort(key=lambda w: f"{w.state}{w.word}")
         lines = [f"{w.word:<85}{w.category:<15}{STATES[w.state]}" for w in words]
         rows = ['-' * console.width for w in words]
         lines = [*chain(*zip(lines, rows))]

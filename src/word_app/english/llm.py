@@ -70,7 +70,7 @@ class Teacher:
     
     def translator(self, text: str) -> Generator[dict, None, None]:
         """Translate a text from English to a selected language. Using a translator model."""
-        return self.text_gen(text, model=self.translator_model, temperature=0, system=self.system_translate)
+        return self.text_gen(text, model=self.translator_model, temperature=0.3, system=self.system_translate)
     
     def game_intro(self, counter: int) -> Generator[dict, None, None]:
         """Generate a game introduction message."""
