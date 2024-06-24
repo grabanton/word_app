@@ -1,0 +1,25 @@
+version: 1.0
+
+llm:
+  base_url: http://localhost:11434
+  models:
+    main: llama3
+    translator: qwen2
+  prompts:
+    system:
+      base_path: ./prompts
+      files:
+        explain: explain.txt
+        translate: translate.txt
+        conversation: conversation.txt
+        riddle: riddle.txt
+        game_intro: game_intro.txt
+        game_qa: game_qa.txt
+        grender: grender.txt
+
+database:
+  path: ../.data/words_database.db
+
+app:
+  debug: false
+  log_level: INFO

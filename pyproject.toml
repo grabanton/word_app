@@ -1,0 +1,36 @@
+[tool.poetry]
+name = "word-app"
+version = "0.1.0"
+description = "An Ollama-based AI app for learning English in a fun way."
+authors = ["Anton Grabovskiy <grabanton@users.noreply.github.com>"]
+packages = [
+    { include = "word_app", from = "src" },
+]
+license = "GPLv3"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+ollama = "^0.2.1"
+windows-curses = {version = "^2.3.1", platform = "win32"}
+rich = "^13.7.1"
+typer = "^0.12.3"
+pyyaml = "^6.0.1"
+
+[tool.poetry.extras]
+linux = ["ncurses"]
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.2.2"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+pythonpath = [
+  "src"
+]
+testpaths = [
+  "tests"
+]
