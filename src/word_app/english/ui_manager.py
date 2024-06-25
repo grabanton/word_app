@@ -113,7 +113,7 @@ class UIManager:
             ("/i, /info {word or phrase}", ("Show information about a word. If word is not provided, show previous word's information."
                                             "The state is a numeric value, but for simplicity, it's shown as a string. More info below.")),
             ("/ct, /cat", "Show all used categories."),
-            ("/a, /all {category}" , "Show all saved words in a specified category. If no category is provided, show all words."),
+            ("/a, /all {category}" , "Show all saved words in a specified category. \nIf no category is provided, show all Uncotegorized words. \nUse 'all' to show all words."),
             ("/d, /del {word or phrase}", "Delete a word from the database. For this operation particular word is required."),
             ("/c, /conv {word or phrase}", f"Start a chat about a word or phrase. Uses the previous word if none provided."),
             (f"/b, /bye (chat {ROBOT_EMOJI} mode only)", f"End the current chat session and return to word lookup mode."),
@@ -150,7 +150,7 @@ class UIManager:
             ("/q, /quit", "Quit the training session."),
             ("/i, /info", "Show information about the current word."),
             ("/ct, /cat", "Show all used categories."),
-            ("/a, /all {category}" , "Show all saved words in a specified category. If no category is provided, show all words."),
+            ("/a, /all {category}" , "Show all saved words in a specified category. \nIf no category is provided, show all Uncotegorized words. \nUse 'all' to show all words."),
             ("/d, /del {word or phrase}", "Delete a word from the database. For this operation particular word is required."),
             ("/c, /conv", f"Start a chat {ROBOT_EMOJI} about the current word."),
             (f"/b, /bye (chat {ROBOT_EMOJI} mode only)", f"End the current chat session and return to training."),
@@ -219,7 +219,13 @@ class UIManager:
         header = f"{'Word':<80} {'Category':<15} {'State'}"
         words = manager.fetch_words(category=category)
         words.sort(key=lambda w: f"{w.state}{w.word}")
-        lines = [f"{w.word:<85}{w.category:<15}{STATES[w.state]}" for w in words]
+        # lines = [f"{w.word:<85}{w.category:<15}{STATES[w.state]}" for w in words]
+        lines = []
+        for w in words:
+            word =w.word
+            category = w.category if w.category else "Uncategorized"
+            state = STATES[w.state]
+            lines.append(f"{word:<80} {category:<15} {state}")
         rows = ['-' * console.width for w in words]
         lines = [*chain(*zip(lines, rows))]
         pager = MyPager(header, lines)

@@ -137,10 +137,12 @@ class WordManager:
     
     def fetch_words(self, category: Optional[str] = None) -> List[Word]:
         """Fetch all words by category from the database."""
-        if category:
+        if category == 'all':
+            self.cursor.execute("SELECT * FROM words")
+        elif category:
             self.cursor.execute("SELECT * FROM words WHERE category = ?", (category,))
         else:
-            self.cursor.execute("SELECT * FROM words")
+            self.cursor.execute("SELECT * FROM words WHERE category = ''")
         
         results = self.cursor.fetchall()
         return [Word(*result) for result in results]
