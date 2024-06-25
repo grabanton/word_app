@@ -71,19 +71,23 @@ class Teacher:
     
     def translator(self, text: str) -> Generator[dict, None, None]:
         """Translate a text from English to a selected language. Using a translator model."""
-        return self.text_gen(text, model=self.translator_model, temperature=0.3, system=self.system_translate)
+        prompt = f'The text to translate:\n{text}'
+        return self.text_gen(prompt, model=self.translator_model, temperature=0.3, system=self.system_translate)
     
     def game_intro(self, counter: int) -> Generator[dict, None, None]:
         """Generate a game introduction message."""
-        prompt = self.system_game_intro.format(N=counter)
-        return self.text_gen("I'm not ready", system=prompt)
+        prompt = "I'm not ready"
+        system = self.system_game_intro.format(N=counter)
+        return self.text_gen(prompt, system=system, temperature=0.7)
     
     def riddler(self, word: str) -> Generator[dict, None, None]:
         """Generate a riddle based on the prompt."""
-        prompt = self.system_riddle
-        return self.text_gen(word, system=prompt, temperature=0.7)
+        prompt = f'The word is "{word}".'
+        system = self.system_riddle
+        return self.text_gen(prompt, system=system, temperature=0.7)
     
     def grader(self, word: str, answer: str) -> Generator[dict, None, None]:
         """Grade the user's answer to the riddle."""
-        prompt = self.system_grader.format(WORD=word)
-        return self.text_gen(answer, system=prompt, temperature=0)
+        prompt = f'The answer is "{answer}".'
+        system = self.system_grader.format(WORD=word)
+        return self.text_gen(prompt, system=system, temperature=0)
