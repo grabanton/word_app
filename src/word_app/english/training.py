@@ -1,9 +1,10 @@
 import random
-from typing import Tuple, List, Generator, Optional
+from typing import Tuple, List, Dict, Generator, Optional
 from rich.console import Console
 from rich.layout import Layout
 from rich.live import Live
 import time
+import re
 
 from .word_manager import WordManager, Word, STATES
 from .ui_manager import UIManager
@@ -20,6 +21,8 @@ class BaseWordApp:
         self.word_manager = WordManager()
         self.ui_manager = UIManager()
         self.teacher = Teacher()
+        self._base_command_handlers = self._get_base_command_handlers()
+        self._specific_command_handlers = {}
 
     def run(self) -> None:
         """Main loop for the application."""
@@ -29,73 +32,65 @@ class BaseWordApp:
             self.print_categories()
         previous_command: str = None
         while True:
-            command: str = console.input(f"[green bold]{prompt}[white] > ").strip()
-            if command.startswith("/q"):
-                break
-            
-            command, action = self.parse_command(command, previous_command)
-
-            if action == "help":
-                self.show_help()
-            elif action == "info":
-                self.show_word_info(command)
-            elif action == "manual":
-                self.manual_update(command)
-            elif action == "chat":
-                check = self.chat_mode(command)
-                if check == "quit":
-                    break
-
-            elif action == "show_all":
-                self.show_all(command)
-            elif action == "show_categories":
-                self.print_categories()
+            command: str = console.input(f"[green bold]{prompt}[white] > ").strip()  
+            is_command, action, args = self.parse_command(command, previous_command)
+            if is_command:
+                check = self.handle_specific_action(action, [args])
             else:
-                check = self.handle_specific_action(action, command)
-                if check == "quit":
-                    break
-            
-            previous_command = command
+                self.handle_specific_action('specific', [command])
+            previous_command = action
 
-    def show_help(self) -> None:
+    def _get_base_command_handlers(self) -> Dict:
+        return {
+            "/h": self.show_help,
+            "/help": self.show_help,
+            "/i" : self.show_word_info,
+            "/info": self.show_word_info,
+            "/m": self.manual_update,
+            "/ct": self.print_categories,
+            "/cat": self.print_categories,
+            "/a": self.show_all,
+            "/all": self.show_all,
+            "/d": self.delete_word,
+            "/del": self.delete_word,
+            "/c": self.chat_mode,
+            "/conv": self.chat_mode,
+            "/q": lambda *x: exit(),
+            "/quit": lambda *x: exit(),
+            "/bye": lambda *x: "bye",
+        }
+
+    def parse_command(self, command: str, previous_command: str) -> Tuple[bool, Optional[str], Optional[str]]:
+        """Parse the user input and return the command, the action to be performed, and whether it is a command."""
+        pattern = re.compile(r"^\s*(\/[a-zA-Z]+)\s*([a-zA-Z _]*)$")
+        match = pattern.match(command)
+        if match:
+            action = match.group(1)
+            argument = match.group(2).strip()
+            if argument == "":
+                argument = previous_command
+            return True, action, argument
+        else:
+            return False, command, None
+        
+    def handle_specific_action(self, action: str, args: List = []) -> Optional[str]:
+        """Handle mode-specific actions. To be overridden by subclasses."""
+        if action in self._specific_command_handlers:
+            return self._specific_command_handlers[action](*args)
+        else:
+            return self._base_command_handlers.get(action, lambda : None)(*args)
+        
+    def process_command(self, command:str, prompt:str) -> str:
+        is_command, action, args = self.parse_command(command, None)
+        if is_command:
+            self.handle_specific_action(action, [args])
+            command = console.input(prompt)
+        return is_command, command
+
+    def show_help(self,*args) -> None:
         """Display help information."""
         mode = "dictionary" if isinstance(self, WordDictionary) else "trainer"
         self.ui_manager.show_help(console, mode)
-
-    def parse_command(self, command: str, previous_command: str) -> Tuple[str, str]:
-        """Parse the user input and return the command and the action to be performed."""
-        if command.startswith("/h"):
-            return "", "help"
-        elif command.startswith("/info"):
-            return command[6:].strip() or previous_command, "info"
-        elif command.startswith("/i"):
-            return command[2:].strip() or previous_command, "info"
-        elif command.startswith("/all"):
-            return command[5:], "show_all"
-        elif command.startswith("/a"):
-            return command[2:].strip(), "show_all"
-        elif command.startswith("/cat"):
-            return "", "show_categories"
-        elif command.startswith("/ct"):
-            return "", "show_categories"
-        elif command.startswith("/man"):
-            return command[5:].strip() or previous_command, "manual"
-        elif command.startswith("/m"):
-            return command[2:].strip() or previous_command, "manual"
-        elif command.startswith("/conv"):
-            return command[6:].strip() or previous_command, "chat"
-        elif command.startswith("/c"):
-            return command[2:].strip() or previous_command, "chat"
-        elif command.startswith("/upd"):
-            return command[5:].strip(), "update"
-        elif command.startswith("/u"):
-            return command[2:].strip(), "update"
-        elif command.startswith("/del"):
-            return command[5:].strip(), "delete"
-        elif command.startswith("/d"):
-            return command[2:].strip(), "delete"
-        else:
-            return command, "specific"
 
     def show_word_info(self, word: str) -> None:
         """Print information about a word."""
@@ -141,10 +136,11 @@ class BaseWordApp:
         while True:
             question = "Hello!" if is_first else self.get_multiline_input()
             is_first = False
-            if question.startswith("/b"):
-                break
-            elif question.startswith("/q"):
-                return 'quit'
+            is_command, action, args = self.parse_command(question, None)
+            if is_command:
+                check = self.handle_specific_action(action, [args])
+                if check == "bye":
+                    break
             answer = self.teacher.conversation(question)
             self.display_chat_answer(answer)
         
@@ -181,22 +177,20 @@ class BaseWordApp:
     def print_categories(self) -> None:
         self.ui_manager.show_categories(console, self.word_manager)
 
-    def handle_specific_action(self, action: str, command: str) -> None:
-        """Handle mode-specific actions. To be overridden by subclasses."""
-        pass
-
 class WordDictionary(BaseWordApp):
     """Class for dictionary mode of the application."""
+    def __init__(self):
+        super().__init__()
+        self._specific_command_handlers = self._get_specific_command_handlers()
 
-    def handle_specific_action(self, action: str, word: str) -> None:
-        if action == "update":
-            self.process_word(word, is_update=True)
-        elif action == "specific":
-            self.process_word(word, is_update=False)
-        elif action == "delete":
-            self.delete_word(word)
+    def _get_specific_command_handlers(self) -> Dict:
+        return {
+            "/u": lambda word, *x: self.process_word(word, True),
+            "/upd": lambda word, *x: self.process_word(word, True),
+            "specific": lambda word, *x: self.process_word(word),
+        }
 
-    def process_word(self, command: str, is_update: bool) -> None:
+    def process_word(self, command: str, is_update: bool=False) -> None:
         """Process a word. Or update an existing one."""
         layout: Layout = self.ui_manager.create_layout()
         self.ui_manager.update_command_panel(layout, command)
@@ -251,25 +245,16 @@ class WordTrainer(BaseWordApp):
     def __init__(self):
         super().__init__()
         self.used_words = set()
+        self._specific_command_handlers = {'specific': lambda category, *x: self.start_training(category)}
 
     def run(self) -> None:
         super().run()
 
-    def handle_specific_action(self, action: str, command: str) -> Optional[str]:
-        return self.start_training(command)
-    
-    def handle_specific_action(self, action: str, word: str) -> None:
-        if action == "delete":
-            self.delete_word(word)
-        elif action == "specific":
-            check = self.start_training(word)
-            if check == "quit":
-                return "quit"
-
-    def start_training(self, category: str = "") -> Optional[str]:
+    def start_training(self, category: str, *args) -> Optional[str]:
         include_mastered = False
-        if category.endswith(" all"):
-            category = category[:-4].strip()
+        print(category)
+        if category.endswith(" --full"):
+            category = category[:-7].strip()
             include_mastered = True
         
         category = category if category else None
@@ -285,6 +270,7 @@ class WordTrainer(BaseWordApp):
                 if not word:
                     console.print("No words available for training.")
                     break
+
             check = self.start_game()
             if check == "quit":
                 return "quit"
@@ -317,15 +303,15 @@ class WordTrainer(BaseWordApp):
             
     def start_game(self) -> Optional[str]:
         check = console.input("[green]Are you ready?[white] >")
+        is_command, check = self.process_command(check, "[green]Are you ready?[white] >")
         counter = 0
         while True:
             if check.strip().lower() in ["n", "no", "not ready", "not yet", "nope", "nah", "nay"]:
                 counter += 1
                 game = self.teacher.game_intro(counter)
                 intro = self.draw_stream(game, mode='generate')
-                check = console.input("[green]Now? [white]> ")  
-            elif check.strip().lower() == "/q":
-                return "quit"
+                check = console.input("[green]Now? [white]> ")
+                is_command, check = self.process_command(check, "[green]Now? [white]> ")
             else:
                 break
 
@@ -339,12 +325,10 @@ class WordTrainer(BaseWordApp):
                 answer = self.teacher.conversation(command)
                 full_answer = self.draw_stream(answer, mode='chat')
                 check = console.input("[green]Your guess >")
-                if check == "/q":
-                    return "quit"
-                elif not check.strip().startswith("?") :
+                is_command, check = self.process_command(check, "[green]Your guess >")
+                if not is_command and check.strip().startswith("?") :
                     return check
-                else :
-                    command = check[1:]
+                else : command = check.strip()[1:]
         else:
             return question
 
