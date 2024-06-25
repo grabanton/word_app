@@ -33,7 +33,7 @@ class BaseWordApp:
             command: str = console.input(f"[green bold]{prompt}[white] > ").strip()  
             is_command, action, args = self.parse_command(command, previous_command)
             if is_command:
-                check = self.handle_specific_action(action, [args])
+                self.handle_specific_action(action, [args])
             else:
                 self.handle_specific_action('specific', [command])
             previous_command = action
@@ -265,9 +265,8 @@ class WordTrainer(BaseWordApp):
                     console.print("No words available for training.")
                     break
 
-            check = self.start_game()
-            
-            riddle = self.word_riddle(word)
+            self.start_game()
+            self.word_riddle(word)
             user_guess = ""
             while not user_guess:
                 user_guess = console.input("[green]Your guess > ").strip().lower()
@@ -275,7 +274,7 @@ class WordTrainer(BaseWordApp):
             if not user_guess or is_command:
                 continue
 
-            grade = self.grade_guess(word, user_guess)
+            self.grade_guess(word, user_guess)
             
     def start_game(self) -> Optional[str]:
         check = console.input("[green]Are you ready?[white] >")
@@ -285,7 +284,7 @@ class WordTrainer(BaseWordApp):
             if check.strip().lower() in ["n", "no", "not ready", "not yet", "nope", "nah", "nay"]:
                 counter += 1
                 game = self.teacher.game_intro(counter)
-                intro = self.draw_stream(game, mode='generate')
+                self.draw_stream(game, mode='generate')
                 check = console.input("[green]Now? [white]> ")
                 is_command, check = self.process_command(check, "[green]Now? [white]> ")
             else:
@@ -299,7 +298,7 @@ class WordTrainer(BaseWordApp):
             self.teacher.append_content(riddle, role='assistant')
             while True :
                 answer = self.teacher.conversation(command)
-                full_answer = self.draw_stream(answer, mode='chat')
+                self.draw_stream(answer, mode='chat')
                 check = console.input("[green]Your guess >")
                 is_command, check = self.process_command(check, "[green]Your guess >")
                 if not is_command and check.strip().startswith("?") :
