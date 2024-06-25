@@ -277,9 +277,6 @@ class WordTrainer(BaseWordApp):
             while not user_guess:
                 user_guess = console.input("[green]Your guess > ").strip().lower()
                 is_command, user_guess = self.process_command(user_guess, "[green]Your guess > ")
-                if is_command:
-                    user_guess = ""
-                    continue
             user_guess = self.game_conversation(word, riddle, user_guess)
             if not user_guess:
                 continue
