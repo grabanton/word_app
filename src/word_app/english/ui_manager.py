@@ -176,7 +176,7 @@ class UIManager:
 
     @staticmethod
     def show_categories(console: Console, manager: WordManager) -> None:
-        words = manager.fetch_words()
+        words = manager.fetch_words(category='all')
         total_words = len(words)
         category_counts = {}
         for word in words:
