@@ -66,7 +66,8 @@ class Teacher:
 
     def explainer(self, word: str) -> Generator[dict, None, None]:
         """Generate an explanation for a word. Using a main model."""
-        return self.text_gen(word, system=self.system_explain)
+        prompt = f'Explain "{word}".'
+        return self.text_gen(prompt, system=self.system_explain)
     
     def translator(self, text: str) -> Generator[dict, None, None]:
         """Translate a text from English to a selected language. Using a translator model."""
