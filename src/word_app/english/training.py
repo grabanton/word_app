@@ -3,6 +3,7 @@ from typing import Tuple, List, Generator, Optional
 from rich.console import Console
 from rich.layout import Layout
 from rich.live import Live
+import time
 
 from .word_manager import WordManager, Word, STATES
 from .ui_manager import UIManager
@@ -10,6 +11,7 @@ from .llm import Teacher
 
 
 ROBOT_EMOJI = "\U0001F916"
+REFRESH_RATE = 4
 console = Console()
 
 class BaseWordApp:
@@ -149,11 +151,14 @@ class BaseWordApp:
     def draw_stream(self, stream: Generator, mode: str = 'chat') -> str:
         with Live(console=console, auto_refresh=False) as live:
             full_answer = f"{ROBOT_EMOJI} "
+            now = time.time()
             for chunk in stream:
                 token = chunk['message']['content'] if mode == 'chat' else chunk['response']
                 full_answer += token
-                self.ui_manager.update_converation_output(full_answer, live)
-                live.refresh()
+                if (time.time() - now) > 1.0/REFRESH_RATE:
+                    self.ui_manager.update_converation_output(full_answer, live)
+                    live.refresh()
+                    now = time.time()
             return full_answer
 
     def get_multiline_input(self) -> str:
@@ -361,11 +366,15 @@ class WordTrainer(BaseWordApp):
 
     def word_riddle(self, word: Word) -> str:
         riddle = self.teacher.riddler(word.word)
-        with Live(console=console, refresh_per_second=20) as live:
+        with Live(console=console, auto_refresh=False) as live:
             full_riddle = f"{ROBOT_EMOJI} "
+            now = time.time()
             for chunk in riddle:
                 full_riddle += chunk['response']
-                self.ui_manager.update_converation_output(full_riddle, live)
+                if (time.time() - now) > 1.0/REFRESH_RATE:
+                    self.ui_manager.update_converation_output(full_riddle, live)
+                    live.refresh()
+                    now = time.time()
             return full_riddle
 
     def grade_guess(self, word: Word, guess: str) -> Optional[str]:

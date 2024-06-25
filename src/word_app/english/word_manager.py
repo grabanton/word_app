@@ -75,14 +75,16 @@ class WordManager:
         """Insert a new word into the database. If the word already exists, update it."""
         self.cursor.execute("SELECT * FROM words WHERE word = ?", (word,))
         existing = self.cursor.fetchone()
-        
         if existing:
+            new_category = existing[1] if not category else category
+            ask_counter = existing[4]
+            state = existing[5]
             query = '''
                 UPDATE words 
                 SET category = ?, explanation_en = ?, explanation_ru = ?, ask_counter = ?, state = ?
                 WHERE word = ?
             '''
-            params = (category, explanation_en, explanation_ru, 1, 0, word)
+            params = (new_category, explanation_en, explanation_ru, ask_counter, state, word)
         else:
             query = '''
                 INSERT INTO words 
