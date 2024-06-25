@@ -2,3 +2,4 @@ config/config.yaml
 *.pyc
 .data/*
 tests/*
+.vscode/settings.json
