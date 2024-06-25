@@ -79,12 +79,16 @@ class BaseWordApp:
         else:
             return self._base_command_handlers.get(action, lambda : None)(*args)
         
-    def process_command(self, command:str, prompt:str) -> str:
-        is_command, action, args = self.parse_command(command, None)
-        if is_command:
-            self.handle_specific_action(action, [args])
-            command = console.input(prompt)
-        return is_command, command
+    def process_command(self, prompt:str) -> str:
+        """Process a command and return the next command."""
+        command = console.input(prompt).strip()
+        is_command = True
+        while is_command:
+            is_command, action, args = self.parse_command(command, None)
+            if is_command:
+                self.handle_specific_action(action, [args])
+                command = console.input(prompt).strip()
+        return command
 
     def display_existing_word(self, layout: Layout, word: Word) -> None:
         """Display an existing word in the database."""
@@ -147,11 +151,8 @@ class BaseWordApp:
         with Live(layout, console=console, auto_refresh=False) as live:
             explanation_text, translation_text = self.generate_explanations(word, layout, live)
         warning = " ([red]Previous word data will be lost[white])" if rewrite else ""
-        answer = console.input(f'Save the word?{warning} : [yellow]y [magenta]optional[white](category) or press Enter to skip > ')
-        is_command = True
-        while is_command:
-            is_command, answer = self.process_command(answer, f'Save the word?{warning} : [yellow]y [magenta]optional[white](category) or press Enter to skip > ')
-        answer = answer.strip().lower()
+        answer = self.process_command(f'Save the word?{warning} : [yellow]y [magenta]optional[white](category) or press Enter to skip > ')
+        answer = answer.lower()
         if answer.startswith("y"):
             category = answer.replace("y", "").strip()
             self.word_manager.insert_word(word, category, explanation_text, translation_text)
@@ -282,11 +283,7 @@ class WordTrainer(BaseWordApp):
             riddle = self.word_riddle(word)
             user_guess = ""
             while not user_guess:
-                user_guess = console.input("[green]Your guess > ").strip().lower()
-                is_command = True
-                while is_command:
-                    is_command, user_guess = self.process_command(user_guess, "[green]Your guess > ")
-                    console.print("end loop iteration")
+                user_guess = self.process_command("[green]Your guess > ")
 
             user_guess = self.game_conversation(word, riddle, user_guess)
             if not user_guess:
@@ -315,20 +312,14 @@ class WordTrainer(BaseWordApp):
             self.process_new_word(layout, word, False)
             
     def start_game(self) -> Optional[str]:
-        check = console.input("[green]Are you ready?[white] >")
-        is_command = True
-        while is_command:
-            is_command, check = self.process_command(check, "[green]Are you ready?[white] >")
+        check = self.process_command("[green]Are you ready?[white] >")
         counter = 0
         while True:
             if check.strip().lower() in ["n", "no", "not ready", "not yet", "nope", "nah", "nay"]:
                 counter += 1
                 game = self.teacher.game_intro(counter)
                 self.draw_stream(game, mode='generate')
-                check = console.input("[green]Now? [white]> ")
-                is_command = True
-                while is_command:
-                    is_command, check = self.process_command(check, "[green]Now? [white]> ")
+                check = self.process_command("[green]Now? [white]> ")
             else:
                 break
 
@@ -341,10 +332,7 @@ class WordTrainer(BaseWordApp):
             while True :
                 answer = self.teacher.conversation(command)
                 self.draw_stream(answer, mode='chat')
-                check = console.input("[green]Your guess >")
-                is_command = True
-                while is_command:
-                    is_command, check = self.process_command(check, "[green]Your guess >")
+                check = self.process_command("[green]Your guess >")
                 if not check.strip().startswith("?") :
                     return check
                 else : command = check.strip()[1:]
@@ -380,10 +368,7 @@ class WordTrainer(BaseWordApp):
         if guess.strip().lower() == word.word.lower():
             console.print(f"{ROBOT_EMOJI} [green]Correct!\n [white]Literaly equals to the correct answer. Moving to the next word.\n")
             self.word_manager.process_state(word.word, 1)
-            check = console.input(f"Ready to the next word? >")
-            is_command = True
-            while is_command:
-                is_command, check = self.process_command(check, f"Ready to the next word? >")
+            check = self.process_command(f"Ready to the next word? >")
         else:
             grade = self.teacher.grader(word.word, guess)
             full_grade = f"{ROBOT_EMOJI} "
@@ -398,11 +383,8 @@ class WordTrainer(BaseWordApp):
                 self.word_manager.process_state(word.word, 1)
             else:
                 self.word_manager.process_state(word.word, -1)
-                check = console.input("Would you like to chat about this word? (y/n): ").lower().strip()
-                is_command = True
-                while is_command:
-                    is_command, check = self.process_command(check, "Would you like to chat about this word? (y/n): ")
-                if check.strip() == "y":
+                check = self.process_command("Would you like to chat about this word? (y/n): ")
+                if check.lower() == "y":
                     check = self.chat_mode(word.word)
 
     def print_training_stats(self, category: str = None) -> None:
