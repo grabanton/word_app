@@ -273,12 +273,13 @@ class WordTrainer(BaseWordApp):
 
             self.start_game()
             riddle = self.word_riddle(word)
-            self.game_conversation(word, self.word_riddle(word), "What is this word?")
             user_guess = ""
-            user_guess = console.input("[green]Your guess > ").strip().lower()
-            is_command, user_guess = self.process_command(user_guess, "[green]Your guess > ")
-            if is_command:
-                continue
+            while not user_guess:
+                user_guess = console.input("[green]Your guess > ").strip().lower()
+                is_command, user_guess = self.process_command(user_guess, "[green]Your guess > ")
+                if is_command:
+                    user_guess = ""
+                    continue
             user_guess = self.game_conversation(word, riddle, user_guess)
             if not user_guess:
                 continue
@@ -318,7 +319,7 @@ class WordTrainer(BaseWordApp):
                 self.draw_stream(answer, mode='chat')
                 check = console.input("[green]Your guess >")
                 is_command, check = self.process_command(check, "[green]Your guess >")
-                if not is_command and check.strip().startswith("?") :
+                if not is_command and not check.strip().startswith("?") :
                     return check
                 else : command = check.strip()[1:]
         else:
