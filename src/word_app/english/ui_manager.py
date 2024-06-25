@@ -219,7 +219,6 @@ class UIManager:
         header = f"{'Word':<80} {'Category':<15} {'State'}"
         words = manager.fetch_words(category=category)
         words.sort(key=lambda w: f"{w.state}{w.word}")
-        # lines = [f"{w.word:<85}{w.category:<15}{STATES[w.state]}" for w in words]
         lines = []
         for w in words:
             word =w.word
