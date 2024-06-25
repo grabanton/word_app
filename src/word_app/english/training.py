@@ -28,9 +28,9 @@ class BaseWordApp:
         prompt = 'Word' if isinstance(self, WordDictionary) else 'Category'
         if isinstance(self, WordTrainer):
             self.print_categories()
-        previous_command: str = None
+        previous_command = None
         while True:
-            command: str = console.input(f"[green bold]{prompt}[white] > ").strip()  
+            command = console.input(f"[green bold]{prompt}[white] > ").strip()  
             is_command, action, args = self.parse_command(command, previous_command)
             if is_command:
                 self.handle_specific_action(action, [args])
@@ -59,14 +59,15 @@ class BaseWordApp:
         }
 
     def parse_command(self, command: str, previous_command: str) -> Tuple[bool, Optional[str], Optional[str]]:
-        """Parse the user input and return the command, the action to be performed, and whether it is a command."""
-        pattern = re.compile(r"^\s*(\/[a-zA-Z]+)\s*([a-zA-Z _]*)$")
+        """Parse the user input and return True if it's a command.(startswith "/"), command string and argument. 
+           Otherwise return False, the input command string and None."""
+        pattern = re.compile(r"^\s*(\/[a-zA-Z]+)\s*([a-zA-Z0-9 _]*)$")
         match = pattern.match(command)
         if match:
             action = match.group(1)
-            argument = match.group(2).strip()
+            argument = match.group(2).strip() if match.group(2) else None
             if argument == "":
-                argument = previous_command
+                argument = previous_command.strip() if previous_command else None
             return True, action, argument
         else:
             return False, command, None
@@ -85,6 +86,14 @@ class BaseWordApp:
             command = console.input(prompt)
         return is_command, command
 
+    def display_existing_word(self, layout: Layout, word: Word) -> None:
+        """Display an existing word in the database."""
+        with Live(layout, console=console, refresh_per_second=4) as live:
+            self.ui_manager.display_word(layout, word)
+            live.update(layout)
+        self.word_manager.increment_counter(word.word)
+        self.word_manager.process_state(word.word, -1)
+
     def show_help(self,*args) -> None:
         """Display help information."""
         mode = "dictionary" if isinstance(self, WordDictionary) else "trainer"
@@ -95,7 +104,7 @@ class BaseWordApp:
         word = self.word_manager.fetch_word(word)
         console.print(word)
     
-    def show_all(self, category: str="") -> None:
+    def show_all(self, category: str, *args) -> None:
         """Show all words in the database."""
         self.ui_manager.show_all_words(console, self.word_manager, category)
 
@@ -168,7 +177,7 @@ class BaseWordApp:
         full_answer = self.draw_stream(answer)
         self.teacher.append_content(full_answer)
 
-    def print_categories(self) -> None:
+    def print_categories(self, *args) -> None:
         self.ui_manager.show_categories(console, self.word_manager)
 
 class WordDictionary(BaseWordApp):
@@ -194,20 +203,13 @@ class WordDictionary(BaseWordApp):
         elif command.strip():
             self.process_new_word(layout, command, is_update)
 
-    def display_existing_word(self, layout: Layout, word: Word) -> None:
-        """Display an existing word in the database."""
-        with Live(layout, console=console, refresh_per_second=4) as live:
-            self.ui_manager.display_word(layout, word)
-            live.update(layout)
-        self.word_manager.increment_counter(word.word)
-        self.word_manager.process_state(word.word, -1)
-
     def process_new_word(self, layout: Layout, word: str, rewrite: bool) -> None:
         """Process a new word. Or rewrite an existing one."""
         with Live(layout, console=console, auto_refresh=False) as live:
             explanation_text, translation_text = self.generate_explanations(word, layout, live)
         warning = " ([red]Previous word data will be lost[white])" if rewrite else ""
-        answer: str = console.input(f'Save the word?{warning} : [yellow]y [magenta]optional[white](category) or press Enter to skip > ')
+        answer = console.input(f'Save the word?{warning} : [yellow]y [magenta]optional[white](category) or press Enter to skip > ')
+        is_command, answer = self.process_command(answer, f'Save the word?{warning} : [yellow]y [magenta]optional[white](category) or press Enter to skip > ')
         answer = answer.strip().lower()
         if answer.startswith("y"):
             category = answer.replace("y", "").strip()
@@ -215,8 +217,8 @@ class WordDictionary(BaseWordApp):
 
     def generate_explanations(self, word: str, layout: Layout, live: Live) -> Tuple[str, str]:
         """Generate explanations and translations for a given word."""
-        explanation_text: str = ""
-        translation_text: str = ""
+        explanation_text = ""
+        translation_text = ""
         
         explanation = self.teacher.explainer(word)
         for chunk in explanation:
@@ -239,7 +241,11 @@ class WordTrainer(BaseWordApp):
     def __init__(self):
         super().__init__()
         self.used_words = set()
-        self._specific_command_handlers = {'specific': lambda category, *x: self.start_training(category)}
+        self._specific_command_handlers = {
+            'specific': lambda category, *x: self.start_training(category),
+            "/l" : lambda word, *x: self.show_word(word),
+            "/lookup": lambda word, *x: self.show_word(word)
+            }
 
     def run(self) -> None:
         super().run()
@@ -266,15 +272,26 @@ class WordTrainer(BaseWordApp):
                     break
 
             self.start_game()
-            self.word_riddle(word)
+            riddle = self.word_riddle(word)
+            self.game_conversation(word, self.word_riddle(word), "What is this word?")
             user_guess = ""
-            while not user_guess:
-                user_guess = console.input("[green]Your guess > ").strip().lower()
-                is_command, user_guess = self.process_command(user_guess, "[green]Your guess > ")
-            if not user_guess or is_command:
+            user_guess = console.input("[green]Your guess > ").strip().lower()
+            is_command, user_guess = self.process_command(user_guess, "[green]Your guess > ")
+            if is_command:
                 continue
-
+            user_guess = self.game_conversation(word, riddle, user_guess)
+            if not user_guess:
+                continue
             self.grade_guess(word, user_guess)
+
+    def show_word(self, name: str, *args) -> None:
+        """Display information about a word."""
+        word = self.word_manager.fetch_word(name)
+        if word:
+            layout = self.ui_manager.create_layout()
+            self.display_existing_word(layout, word)
+        else:
+            console.print(f'Word "{name}" not found.')
             
     def start_game(self) -> Optional[str]:
         check = console.input("[green]Are you ready?[white] >")

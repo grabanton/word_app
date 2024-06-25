@@ -150,6 +150,7 @@ class UIManager:
             ("/h, /help", "Show this help message."),
             ("/q, /quit", "Quit the training session."),
             ("/i, /info", "Show information about the current word."),
+            ("/l, /lookup {word}", "Look up a specific word."),
             ("/ct, /cat", "Show all used categories."),
             ("/a, /all {category}" , "Show all saved words in a specified category. \nIf no category is provided, show all Uncotegorized words. \nUse 'all' to show all words."),
             ("/d, /del {word or phrase}", "Delete a word from the database. For this operation particular word is required."),
