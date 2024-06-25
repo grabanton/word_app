@@ -3,7 +3,6 @@ from typing import Tuple, List, Dict, Generator, Optional
 from rich.console import Console
 from rich.layout import Layout
 from rich.live import Live
-import time
 import re
 
 from .word_manager import WordManager, Word, STATES
@@ -12,7 +11,6 @@ from .llm import Teacher
 
 
 ROBOT_EMOJI = "\U0001F916"
-REFRESH_RATE = 4
 console = Console()
 
 class BaseWordApp:
@@ -147,14 +145,10 @@ class BaseWordApp:
     def draw_stream(self, stream: Generator, mode: str = 'chat') -> str:
         with Live(console=console, auto_refresh=False) as live:
             full_answer = f"{ROBOT_EMOJI} "
-            now = time.time()
             for chunk in stream:
                 token = chunk['message']['content'] if mode == 'chat' else chunk['response']
                 full_answer += token
-                if (time.time() - now) > 1.0/REFRESH_RATE:
-                    self.ui_manager.update_converation_output(full_answer, live)
-                    live.refresh()
-                    now = time.time()
+                self.ui_manager.update_converation_output(full_answer, live)
             return full_answer
 
     def get_multiline_input(self) -> str:
@@ -272,34 +266,16 @@ class WordTrainer(BaseWordApp):
                     break
 
             check = self.start_game()
-            if check == "quit":
-                return "quit"
             
             riddle = self.word_riddle(word)
             user_guess = ""
             while not user_guess:
                 user_guess = console.input("[green]Your guess > ").strip().lower()
-            if not user_guess:
-                continue
-
-            user_guess = self.game_conversation(word, riddle, user_guess)
-            if user_guess == "quit":
-                return "quit"
-            if user_guess == "/q" or user_guess == "/bye":
-                return 'quit'
-            
-            elif user_guess.startswith("/i"):
-                self.show_word_info(word.word)
-                continue
-            elif user_guess.startswith("/c"):
-                check = self.chat_mode(word.word)
-                if check == "quit":
-                    return "quit"
+                is_command, user_guess = self.process_command(user_guess, "[green]Your guess > ")
+            if not user_guess or is_command:
                 continue
 
             grade = self.grade_guess(word, user_guess)
-            if grade == "quit":
-                return 'quit'
             
     def start_game(self) -> Optional[str]:
         check = console.input("[green]Are you ready?[white] >")
@@ -352,13 +328,9 @@ class WordTrainer(BaseWordApp):
         riddle = self.teacher.riddler(word.word)
         with Live(console=console, auto_refresh=False) as live:
             full_riddle = f"{ROBOT_EMOJI} "
-            now = time.time()
             for chunk in riddle:
                 full_riddle += chunk['response']
-                if (time.time() - now) > 1.0/REFRESH_RATE:
-                    self.ui_manager.update_converation_output(full_riddle, live)
-                    live.refresh()
-                    now = time.time()
+                self.ui_manager.update_converation_output(full_riddle, live)
             return full_riddle
 
     def grade_guess(self, word: Word, guess: str) -> Optional[str]:
@@ -366,28 +338,25 @@ class WordTrainer(BaseWordApp):
             console.print(f"{ROBOT_EMOJI} [green]Correct!\n [white]Literaly equals to the correct answer. Moving to the next word.\n")
             self.word_manager.process_state(word.word, 1)
             check = console.input(f"Ready to the next word? >")
-            if check.strip().lower() == "/q":
-                return "quit"
-           
+            is_command, check = self.process_command(check, f"Ready to the next word? >")
         else:
             grade = self.teacher.grader(word.word, guess)
             full_grade = f"{ROBOT_EMOJI} "
-            with Live(console=console, refresh_per_second=20) as live:
+            with Live(console=console, auto_refresh=False) as live:
                 for chunk in grade:
                     full_grade += chunk['response']
                     self.ui_manager.update_converation_output(full_grade, live)
+
+
             if full_grade.replace(ROBOT_EMOJI,'').strip().lower().startswith("correct"):
                 console.print("Moving to the next word.\n")
                 self.word_manager.process_state(word.word, 1)
             else:
                 self.word_manager.process_state(word.word, -1)
                 check = console.input("Would you like to chat about this word? (y/n): ").lower().strip()
-                if check == "y":
+                is_command, check = self.process_command(check, "Would you like to chat about this word? (y/n): ")
+                if check.strip() == "y":
                     check = self.chat_mode(word.word)
-                    if check == "quit":
-                        return "quit"
-                elif check == "/q":
-                    return "quit"
 
     def print_training_stats(self, category: str = None) -> None:
         self.ui_manager.show_training_stats(console, self.word_manager, category)

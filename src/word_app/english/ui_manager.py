@@ -67,6 +67,7 @@ class UIManager:
         markdown = Markdown(answer, style="blue")
         padded_markdown = Padding(markdown, (1,0))
         live.update(Group(padded_markdown))
+        live.refresh()
 
     @staticmethod
     def _update_panel(
