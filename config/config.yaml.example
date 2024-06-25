@@ -6,6 +6,18 @@ llm:
     main: llama3
     translator: qwen2
 
+  prompts:
+    system:
+      base_path: ./prompts
+      files:
+        explain: explain.txt
+        translate: translate.txt
+        conversation: conversation.txt
+        riddle: riddle.txt
+        game_intro: game_intro.txt
+        game_qa: game_qa.txt
+        grader: grender.txt
+
   options:
     generic:
       max_tokens: 2048
@@ -19,23 +31,11 @@ llm:
       riddle:
         temperature: 0.7
       game_intro:
-        temperature: 1
+        temperature: 1.0
       game_qa:
         temperature: 0.7
       grader:
-        temperature: 0
-
-  prompts:
-    system:
-      base_path: ./prompts
-      files:
-        explain: explain.txt
-        translate: translate.txt
-        conversation: conversation.txt
-        riddle: riddle.txt
-        game_intro: game_intro.txt
-        game_qa: game_qa.txt
-        grader: grender.txt
+        temperature: 0.0
 
 database:
   path: ../.data/words_database.db
