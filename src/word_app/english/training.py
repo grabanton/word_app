@@ -132,6 +132,51 @@ class BaseWordApp:
         else:
             console.print("\nDeletion cancelled.\n")
 
+    def process_word(self, command: str, is_update: bool=False) -> None:
+        """Process a word. Or update an existing one."""
+        layout: Layout = self.ui_manager.create_layout()
+        self.ui_manager.update_command_panel(layout, command)
+        word = self.word_manager.fetch_word(command)
+        if word and not is_update:
+            self.display_existing_word(layout, word)
+        elif command.strip():
+            self.process_new_word(layout, command, is_update)
+
+    def process_new_word(self, layout: Layout, word: str, rewrite: bool) -> None:
+        """Process a new word. Or rewrite an existing one."""
+        with Live(layout, console=console, auto_refresh=False) as live:
+            explanation_text, translation_text = self.generate_explanations(word, layout, live)
+        warning = " ([red]Previous word data will be lost[white])" if rewrite else ""
+        answer = console.input(f'Save the word?{warning} : [yellow]y [magenta]optional[white](category) or press Enter to skip > ')
+        is_command = True
+        while is_command:
+            is_command, answer = self.process_command(answer, f'Save the word?{warning} : [yellow]y [magenta]optional[white](category) or press Enter to skip > ')
+        answer = answer.strip().lower()
+        if answer.startswith("y"):
+            category = answer.replace("y", "").strip()
+            self.word_manager.insert_word(word, category, explanation_text, translation_text)
+
+    def generate_explanations(self, word: str, layout: Layout, live: Live) -> Tuple[str, str]:
+        """Generate explanations and translations for a given word."""
+        explanation_text = ""
+        translation_text = ""
+        
+        explanation = self.teacher.explainer(word)
+        for chunk in explanation:
+            explanation_text += chunk['response']
+            self.ui_manager.update_left_panel(layout, explanation_text)
+            live.update(layout)
+            live.refresh()
+
+        translation = self.teacher.translator(explanation_text)
+        for chunk in translation:
+            translation_text += chunk['response']
+            self.ui_manager.update_right_panel(layout, translation_text)
+            live.update(layout)
+            live.refresh()
+        
+        return explanation_text, translation_text
+
     def chat_mode(self, word: str) -> Optional[str]:
         """Start a chat session."""
         if not word:
@@ -193,58 +238,20 @@ class WordDictionary(BaseWordApp):
             "specific": lambda word, *x: self.process_word(word),
         }
 
-    def process_word(self, command: str, is_update: bool=False) -> None:
-        """Process a word. Or update an existing one."""
-        layout: Layout = self.ui_manager.create_layout()
-        self.ui_manager.update_command_panel(layout, command)
-        word = self.word_manager.fetch_word(command)
-        if word and not is_update:
-            self.display_existing_word(layout, word)
-        elif command.strip():
-            self.process_new_word(layout, command, is_update)
-
-    def process_new_word(self, layout: Layout, word: str, rewrite: bool) -> None:
-        """Process a new word. Or rewrite an existing one."""
-        with Live(layout, console=console, auto_refresh=False) as live:
-            explanation_text, translation_text = self.generate_explanations(word, layout, live)
-        warning = " ([red]Previous word data will be lost[white])" if rewrite else ""
-        answer = console.input(f'Save the word?{warning} : [yellow]y [magenta]optional[white](category) or press Enter to skip > ')
-        is_command, answer = self.process_command(answer, f'Save the word?{warning} : [yellow]y [magenta]optional[white](category) or press Enter to skip > ')
-        answer = answer.strip().lower()
-        if answer.startswith("y"):
-            category = answer.replace("y", "").strip()
-            self.word_manager.insert_word(word, category, explanation_text, translation_text)
-
-    def generate_explanations(self, word: str, layout: Layout, live: Live) -> Tuple[str, str]:
-        """Generate explanations and translations for a given word."""
-        explanation_text = ""
-        translation_text = ""
-        
-        explanation = self.teacher.explainer(word)
-        for chunk in explanation:
-            explanation_text += chunk['response']
-            self.ui_manager.update_left_panel(layout, explanation_text)
-            live.update(layout)
-            live.refresh()
-
-        translation = self.teacher.translator(explanation_text)
-        for chunk in translation:
-            translation_text += chunk['response']
-            self.ui_manager.update_right_panel(layout, translation_text)
-            live.update(layout)
-            live.refresh()
-        
-        return explanation_text, translation_text
-
 class WordTrainer(BaseWordApp):
     """Class for trainer mode of the application."""
     def __init__(self):
         super().__init__()
         self.used_words = set()
+        self.category = ""
         self._specific_command_handlers = {
             'specific': lambda category, *x: self.start_training(category),
             "/l" : lambda word, *x: self.show_word(word),
-            "/lookup": lambda word, *x: self.show_word(word)
+            "/lookup": lambda word, *x: self.show_word(word),
+            "/n" : lambda word, *x: self.process_word(word),
+            "/new" : lambda word, *x: self.process_word(word),
+            "/a" : lambda category, *x: self.show_current_words(category),
+            "/all" : lambda category, *x: self.show_current_words(category),
             }
 
     def run(self) -> None:
@@ -257,11 +264,11 @@ class WordTrainer(BaseWordApp):
             category = category[:-7].strip()
             include_mastered = True
         
-        category = category if category else None
-        available_words = self.word_manager.fetch_words(category)
+        self.category = category if category else None
+        available_words = self.word_manager.fetch_words(self.category)
         
         while True:
-            self.print_training_stats(category)
+            self.print_training_stats(self.category)
             word = self.select_word(available_words, include_mastered)
             if not word:
                 console.print("No more words available for training. Resetting used words.")
@@ -276,7 +283,11 @@ class WordTrainer(BaseWordApp):
             user_guess = ""
             while not user_guess:
                 user_guess = console.input("[green]Your guess > ").strip().lower()
-                is_command, user_guess = self.process_command(user_guess, "[green]Your guess > ")
+                is_command = True
+                while is_command:
+                    is_command, user_guess = self.process_command(user_guess, "[green]Your guess > ")
+                    console.print("end loop iteration")
+
             user_guess = self.game_conversation(word, riddle, user_guess)
             if not user_guess:
                 continue
@@ -290,10 +301,24 @@ class WordTrainer(BaseWordApp):
             self.display_existing_word(layout, word)
         else:
             console.print(f'Word "{name}" not found.')
+
+    def show_current_words(self,category:str,*args) -> None:
+        """Show all words that are currently used in the training session."""
+        cat = category if category else self.category
+        self.show_all(cat)
+
+    def add_word(self, word: str) -> None:
+        """Add a new word to the database."""
+        layout = self.ui_manager.create_layout()
+        with Live(layout, console=console, auto_refresh=False) as live:
+            self.ui_manager.update_command_panel(layout, word)
+            self.process_new_word(layout, word, False)
             
     def start_game(self) -> Optional[str]:
         check = console.input("[green]Are you ready?[white] >")
-        is_command, check = self.process_command(check, "[green]Are you ready?[white] >")
+        is_command = True
+        while is_command:
+            is_command, check = self.process_command(check, "[green]Are you ready?[white] >")
         counter = 0
         while True:
             if check.strip().lower() in ["n", "no", "not ready", "not yet", "nope", "nah", "nay"]:
@@ -301,7 +326,9 @@ class WordTrainer(BaseWordApp):
                 game = self.teacher.game_intro(counter)
                 self.draw_stream(game, mode='generate')
                 check = console.input("[green]Now? [white]> ")
-                is_command, check = self.process_command(check, "[green]Now? [white]> ")
+                is_command = True
+                while is_command:
+                    is_command, check = self.process_command(check, "[green]Now? [white]> ")
             else:
                 break
 
@@ -315,8 +342,10 @@ class WordTrainer(BaseWordApp):
                 answer = self.teacher.conversation(command)
                 self.draw_stream(answer, mode='chat')
                 check = console.input("[green]Your guess >")
-                is_command, check = self.process_command(check, "[green]Your guess >")
-                if not is_command and not check.strip().startswith("?") :
+                is_command = True
+                while is_command:
+                    is_command, check = self.process_command(check, "[green]Your guess >")
+                if not check.strip().startswith("?") :
                     return check
                 else : command = check.strip()[1:]
         else:
@@ -352,7 +381,9 @@ class WordTrainer(BaseWordApp):
             console.print(f"{ROBOT_EMOJI} [green]Correct!\n [white]Literaly equals to the correct answer. Moving to the next word.\n")
             self.word_manager.process_state(word.word, 1)
             check = console.input(f"Ready to the next word? >")
-            is_command, check = self.process_command(check, f"Ready to the next word? >")
+            is_command = True
+            while is_command:
+                is_command, check = self.process_command(check, f"Ready to the next word? >")
         else:
             grade = self.teacher.grader(word.word, guess)
             full_grade = f"{ROBOT_EMOJI} "
@@ -368,7 +399,9 @@ class WordTrainer(BaseWordApp):
             else:
                 self.word_manager.process_state(word.word, -1)
                 check = console.input("Would you like to chat about this word? (y/n): ").lower().strip()
-                is_command, check = self.process_command(check, "Would you like to chat about this word? (y/n): ")
+                is_command = True
+                while is_command:
+                    is_command, check = self.process_command(check, "Would you like to chat about this word? (y/n): ")
                 if check.strip() == "y":
                     check = self.chat_mode(word.word)
 

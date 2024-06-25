@@ -152,6 +152,7 @@ class UIManager:
             ("/i, /info", "Show information about the current word."),
             ("/l, /lookup {word}", "Look up a specific word."),
             ("/ct, /cat", "Show all used categories."),
+            ("/n, /new {word}", "Explain a new word and add it to the database if needed."),
             ("/a, /all {category}" , "Show all saved words in a specified category. \nIf no category is provided, show all Uncotegorized words. \nUse 'all' to show all words."),
             ("/d, /del {word or phrase}", "Delete a word from the database. For this operation particular word is required."),
             ("/c, /conv", f"Start a chat {ROBOT_EMOJI} about the current word."),
