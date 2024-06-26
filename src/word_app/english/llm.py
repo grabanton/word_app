@@ -105,7 +105,6 @@ class Teacher:
         mode = "word" if word_count == 1 else "phrase"
         count_clue = "is only one word." if mode == 'word' else f"is a phrase of {word_count} words.(count articles and prepositions also)"
         system = self.system_riddle.format(mode=mode, count_clue=count_clue)
-        print(system)
         return self.text_gen(prompt, system=system, options=self.riddle_options)
     
     def grader(self, word: str, answer: str) -> Generator[dict, None, None]:
