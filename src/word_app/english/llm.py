@@ -1,5 +1,6 @@
-from typing import Generator, Dict
+from typing import Generator, Dict, Tuple
 import ollama
+import re
 from ..config import get_llm_config, get_prompt_path
 
 DEFAULT_OPTIONS = {'temperature': 0.5, 'max_tokens': 2048}
@@ -53,16 +54,18 @@ class Teacher:
     
     def init_convrsation(self, word: str) -> None:
         """Append the initial system message to the chat history."""
+        mode, count = self.get_mode(word)
         self.chat_history = [{
             'role': 'system',
-            'content': self.system_conversation.format(word=word)
+            'content': self.system_conversation.format(word=word,mode=mode)
         }]
 
     def init_qa(self, word: str) -> None:
         """Append the initial system message to the chat history."""
+        mode, count = self.get_mode(word)
         self.chat_history = [{
             'role': 'system',
-            'content': self.system_game_qa.format(word=word)
+            'content': self.system_game_qa.format(word=word, mode=mode)
         }]
 
     def append_content(self, content: str, role: str='assistant') -> None:
@@ -82,7 +85,10 @@ class Teacher:
     def explainer(self, word: str) -> Generator[dict, None, None]:
         """Generate an explanation for a word. Using a main model."""
         prompt = f'Explain "{word}".'
-        return self.text_gen(prompt, system=self.system_explain)
+        mode, count = self.get_mode(word)
+        return self.text_gen(prompt, 
+                             system=self.system_explain.format(mode=mode), 
+                             options=self.explain_options)
     
     def translator(self, text: str) -> Generator[dict, None, None]:
         """Translate a text from English to a selected language. Using a translator model."""
@@ -96,19 +102,35 @@ class Teacher:
         """Generate a game introduction message."""
         prompt = "I'm not ready"
         system = self.system_game_intro.format(N=counter)
-        return self.text_gen(prompt, system=system, options=self.game_intro_options)
+        return self.text_gen(prompt, 
+                             system=system, 
+                             options=self.game_intro_options)
     
     def riddler(self, word: str) -> Generator[dict, None, None]:
         """Generate a riddle based on the prompt."""
         prompt = f'The word is "{word}".'
-        word_count = len(word.split(" "))
-        mode = "word" if word_count == 1 else "phrase"
-        count_clue = "is only one word." if mode == 'word' else f"is a phrase of {word_count} words.(count articles and prepositions also)"
+        mode, count = self.get_mode(word)
+        count_clue = "is only one word." if mode == 'word' else f"is a phrase of {count} words.(count articles and prepositions also)"
         system = self.system_riddle.format(mode=mode, count_clue=count_clue)
-        return self.text_gen(prompt, system=system, options=self.riddle_options)
+        return self.text_gen(prompt, 
+                             system=system, 
+                             options=self.riddle_options)
     
     def grader(self, word: str, answer: str) -> Generator[dict, None, None]:
         """Grade the user's answer to the riddle."""
         prompt = f'The answer is "{answer}".'
-        system = self.system_grader.format(WORD=word)
-        return self.text_gen(prompt, system=system, options=self.grader_options)
+        mode, count = self.get_mode(word)
+        system = self.system_grader.format(WORD=word, mode=mode)
+        return self.text_gen(prompt, 
+                             system=system, 
+                             options=self.grader_options)
+    
+    def word_count(self, text: str) -> int:
+        """Count the number of words in the text."""
+        return len( re.findall( r"[a-zA-Z']+", text ) )
+    
+    def get_mode(self, word: str) -> Tuple[str, int]:
+        """Determine the mode of the game."""
+        count = self.word_count(word)
+        mode = "word" if count == 1 else "phrase"
+        return mode, count

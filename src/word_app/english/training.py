@@ -178,7 +178,7 @@ class BaseWordApp:
         
         return explanation_text, translation_text
 
-    def chat_mode(self, word: str) -> Optional[str]:
+    def chat_mode(self, word: str, *arg) -> Optional[str]:
         """Start a chat session."""
         if not word:
             console.print("You didn't provide any words to chat with.")
@@ -194,7 +194,7 @@ class BaseWordApp:
                 check = self.handle_specific_action(action, [args])
                 if check == "bye":
                     break
-            answer = self.teacher.conversation(question)
+            answer = self.teacher.conversation(question, options=self.teacher.conversation_options)
             self.display_chat_answer(answer)
         
     def draw_stream(self, stream: Generator, mode: str = 'chat') -> str:
@@ -260,7 +260,6 @@ class WordTrainer(BaseWordApp):
 
     def start_training(self, category: str, *args) -> Optional[str]:
         include_mastered = False
-        print(category)
         if category.endswith(" --full"):
             category = category[:-7].strip()
             include_mastered = True
@@ -330,7 +329,7 @@ class WordTrainer(BaseWordApp):
             self.teacher.append_content('Hello!', role='user')
             self.teacher.append_content(riddle, role='assistant')
             while True :
-                answer = self.teacher.conversation(command)
+                answer = self.teacher.conversation(command, options=self.teacher.game_qa_options)
                 self.draw_stream(answer, mode='chat')
                 check = self.process_command("[green]Your guess >")
                 if not check.strip().startswith("?") :
@@ -351,6 +350,7 @@ class WordTrainer(BaseWordApp):
             return None
 
         weights = [max(1, len(STATES) - (w.state or 0)) for w in available_words]
+        weights = [float(w)/sum(weights) for w in weights]
         selected_word = random.choices(available_words, weights=weights, k=1)[0]
         self.used_words.add(selected_word.word)
         return selected_word
