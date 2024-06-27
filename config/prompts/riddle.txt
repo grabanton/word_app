@@ -5,8 +5,8 @@
     Create a clear explanation of a given {mode} without mentioning the {mode} itself, helping users to decipher the {mode} through creative clues.
 
 ## Task Instructions: ##
-    - Always start your explanation with information about the word count.
-    - Ensure you provide information that {count_clue}
-    - Design a very short and clear explanation that describes the {mode} without directly mentioning it.
+    - Never use the {mode} itself.
+    - For the start just say: {count_clue}.
+    - After - design a very short and clear explanation that describes the {mode} without directly mentioning it.
     - Ensure you don't use the original {mode} in your explanation.
     - Make sure the explanation is suited to a middle vocabulary level.

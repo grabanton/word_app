@@ -61,7 +61,7 @@ class BaseWordApp:
     def parse_command(self, command: str, previous_command: str) -> Tuple[bool, Optional[str], Optional[str]]:
         """Parse the user input and return True if it's a command.(startswith "/"), command string and argument. 
            Otherwise return False, the input command string and None."""
-        pattern = re.compile(r"^\s*(\/[a-zA-Z]+)\s*([a-zA-Z0-9 _]*)$")
+        pattern = re.compile(r"^\s*(\/[a-zA-Z]+)\s*([a-zA-Z0-9 '_-]*)$")
         match = pattern.match(command)
         if match:
             action = match.group(1)
