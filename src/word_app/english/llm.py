@@ -7,7 +7,7 @@ DEFAULT_OPTIONS = {'temperature': 0.5, 'max_tokens': 2048}
 
 class Teacher:
     """A class to manage the ollama teacher assistant."""
-    def __init__(self, name: str = 'llama3', stream: bool = True) -> None:
+    def __init__(self, stream: bool = True) -> None:
         self.config = get_llm_config()
         self.main_model = self.config['models']['main']
         self.translator_model = self.config['models']['translator']
@@ -42,10 +42,11 @@ class Teacher:
         specific = self.config['options']['specific'][prompt_name]
         return {**generic, **specific}
 
-    def text_gen(self, prompt: str, model: str = 'llama3', options: Dict = DEFAULT_OPTIONS, system: str = '') -> Generator[dict, None, None]:
+    def text_gen(self, prompt: str, model: str = '', options: Dict = DEFAULT_OPTIONS, system: str = '') -> Generator[dict, None, None]:
         """Generate a text. Completion mode."""
+        the_model = model if model else self.main_model
         return self.client.generate(
-            model=model,
+            model=the_model,
             system=system,
             prompt=prompt,
             options=options,
@@ -106,15 +107,15 @@ class Teacher:
                              system=system, 
                              options=self.game_intro_options)
     
-    def riddler(self, word: str) -> Generator[dict, None, None]:
+    def riddler(self, word: str) -> Tuple[Generator[dict, None, None], str]:
         """Generate a riddle based on the prompt."""
         prompt = f'The word is "{word}".'
         mode, count = self.get_mode(word)
-        count_clue = "is only one word." if mode == 'word' else f"is a phrase of {count} words.(count articles and prepositions also)"
-        system = self.system_riddle.format(mode=mode, count_clue=count_clue)
+        count_clue = "Is only one word." if mode == 'word' else f"Is a phrase of {count} words."
+        system = self.system_riddle.format(mode=mode)
         return self.text_gen(prompt, 
                              system=system, 
-                             options=self.riddle_options)
+                             options=self.riddle_options), count_clue
     
     def grader(self, word: str, answer: str) -> Generator[dict, None, None]:
         """Grade the user's answer to the riddle."""

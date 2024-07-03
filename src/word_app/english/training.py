@@ -356,7 +356,8 @@ class WordTrainer(BaseWordApp):
         return selected_word
 
     def word_riddle(self, word: Word) -> str:
-        riddle = self.teacher.riddler(word.word)
+        riddle, count_clue = self.teacher.riddler(word.word)
+        console.print(f"{ROBOT_EMOJI} [blue]{count_clue}")
         with Live(console=console, auto_refresh=False) as live:
             full_riddle = f"{ROBOT_EMOJI} "
             for chunk in riddle:
@@ -368,7 +369,7 @@ class WordTrainer(BaseWordApp):
         if guess.strip().lower() == word.word.lower():
             console.print(f"{ROBOT_EMOJI} [green]Correct!\n [white]Literaly equals to the correct answer. Moving to the next word.\n")
             self.word_manager.process_state(word.word, 1)
-            check = self.process_command(f"Ready to the next word? >")
+            check = self.process_command(f"> ")
         else:
             grade = self.teacher.grader(word.word, guess)
             full_grade = f"{ROBOT_EMOJI} "
