@@ -5,7 +5,7 @@ from rich.layout import Layout
 from rich.live import Live
 import re
 
-from .word_manager import WordManager, Word, STATES
+from .word_manager import WordManager, Word, IrregularVerb, GrammarTheme, STATES
 from .ui_manager import UIManager
 from .llm import Teacher
 
@@ -20,43 +20,48 @@ class BaseWordApp:
         self.ui_manager = UIManager()
         self.teacher = Teacher()
         self._base_command_handlers = self._get_base_command_handlers()
-        self._specific_command_handlers = {}
+        self._specific_command_handlers = self._get_specific_command_handlers()
 
-    def run(self) -> None:
+    def run(self, prompt: str) -> None:
         """Main loop for the application."""
         self.show_help()
-        prompt = 'Word' if isinstance(self, WordDictionary) else 'Category'
-        if isinstance(self, WordTrainer):
-            self.print_categories()
-        previous_command = None
         while True:
-            command = console.input(f"[green bold]{prompt}[white] > ").strip()  
-            is_command, action, args = self.parse_command(command, previous_command)
-            if is_command:
-                self.handle_specific_action(action, [args])
-            else:
-                self.handle_specific_action('specific', [command])
-            previous_command = action
+            command = self.process_command(prompt)
+            if command.startswith('/q'):
+                break
+
+    def _get_specific_command_handlers(self) -> Dict:
+        """To be overridden by subclasses."""
+        return {'specific': lambda x: None}
 
     def _get_base_command_handlers(self) -> Dict:
         return {
-            "/h": self.show_help,
-            "/help": self.show_help,
-            "/i" : self.show_word_info,
-            "/info": self.show_word_info,
-            "/m": self.manual_update,
-            "/ct": self.print_categories,
-            "/cat": self.print_categories,
-            "/a": self.show_all,
-            "/all": self.show_all,
-            "/d": self.delete_word,
-            "/del": self.delete_word,
-            "/c": self.chat_mode,
-            "/conv": self.chat_mode,
-            "/q": lambda *x: exit(),
-            "/quit": lambda *x: exit(),
-            "/bye": lambda *x: "bye",
-        }
+        "/h": lambda *x: self.show_help(),
+        "/help": lambda *x: self.show_help(),
+        "/i": lambda word, *x: self.show_word_info(word),
+        "/info": lambda word, *x: self.show_word_info(word),
+        "/m": lambda word, *x: self.manual_update(word),
+        "/ct": lambda *x: self.print_categories(),
+        "/cat": lambda *x: self.print_categories(),
+        "/a": lambda category, *x: self.show_all(category),
+        "/all": lambda category, *x: self.show_all(category),
+        "/d": lambda word, *x: self.delete_word(word),
+        "/del": lambda word, *x: self.delete_word(word),
+        "/c": lambda word, *x: self.chat_mode(word),
+        "/conv": lambda word, *x: self.chat_mode(word),
+        "/q": lambda *x: exit(),
+        "/quit": lambda *x: exit(),
+        "/bye": lambda *x: "bye",
+    }
+
+    def handle_action(self, action: str, args: List = []) -> Optional[str]:
+        """Handle actions from both base and specific command handlers."""
+        if action in self._specific_command_handlers:
+            return self._specific_command_handlers[action](*args) if args else self._specific_command_handlers[action]()
+        elif action in self._base_command_handlers:
+            return self._base_command_handlers[action](*args) if args else self._base_command_handlers[action]()
+        else:
+            console.print(f"[red]Unknown command: {action}[/red]")
 
     def parse_command(self, command: str, previous_command: str) -> Tuple[bool, Optional[str], Optional[str]]:
         """Parse the user input and return True if it's a command.(startswith "/"), command string and argument. 
@@ -77,17 +82,22 @@ class BaseWordApp:
         if action in self._specific_command_handlers:
             return self._specific_command_handlers[action](*args)
         else:
-            return self._base_command_handlers.get(action, lambda : None)(*args)
+            if action in self._base_command_handlers:
+                return self._base_command_handlers.get(action, lambda : None)(*args)
+            else:
+                console.print(f"[red]Unknown command: [white]{action}[/red]")
         
-    def process_command(self, prompt:str) -> str:
+    def process_command(self, prompt:str, run_specific: bool = True) -> str:
         """Process a command and return the next command."""
-        command = console.input(prompt).strip()
+        input_title = f"[bold green]{prompt}[white] > "
         is_command = True
         while is_command:
+            command = console.input(input_title).strip()
             is_command, action, args = self.parse_command(command, None)
             if is_command:
                 self.handle_specific_action(action, [args])
-                command = console.input(prompt).strip()
+            elif run_specific:
+                self.handle_specific_action('specific', [command])
         return command
 
     def display_existing_word(self, layout: Layout, word: Word) -> None:
@@ -95,13 +105,12 @@ class BaseWordApp:
         with Live(layout, console=console, refresh_per_second=4) as live:
             self.ui_manager.display_word(layout, word)
             live.update(layout)
-        self.word_manager.increment_counter(word.word)
-        self.word_manager.process_state(word.word, -1)
+        self.word_manager.increment_word_counter(word.word)
+        self.word_manager.process_word_state(word.word, -1)
 
-    def show_help(self,*args) -> None:
+    def show_help(self) -> None:
         """Display help information."""
-        mode = "dictionary" if isinstance(self, WordDictionary) else "trainer"
-        self.ui_manager.show_help(console, mode)
+        self.ui_manager.show_help(console, self.__class__.__name__.lower())
 
     def show_word_info(self, word: str) -> None:
         """Print information about a word."""
@@ -119,7 +128,7 @@ class BaseWordApp:
             self.word_manager.set_category(word, new_category)
         new_state = console.input('[green]State[white] (or "/" to skip) > ').strip()
         if not new_state.startswith("/"):
-            self.word_manager.process_state(word, int(new_state))
+            self.word_manager.process_word_state(word, int(new_state))
 
     def delete_word(self, word: str) -> None:
         """Delete a word from the database."""
@@ -151,7 +160,7 @@ class BaseWordApp:
         with Live(layout, console=console, auto_refresh=False) as live:
             explanation_text, translation_text = self.generate_explanations(word, layout, live)
         warning = " ([red]Previous word data will be lost[white])" if rewrite else ""
-        answer = self.process_command(f'Save the word?{warning} : [yellow]y [magenta]optional[white](category) or press Enter to skip > ')
+        answer = self.process_command(f'Save the word?{warning} : [yellow]y [magenta]optional[white](category) or press Enter to skip')
         answer = answer.lower()
         if answer.startswith("y"):
             category = answer.replace("y", "").strip()
@@ -234,29 +243,38 @@ class WordDictionary(BaseWordApp):
 
     def _get_specific_command_handlers(self) -> Dict:
         return {
+            'specific': lambda word, *x: self.process_word(word),
             "/u": lambda word, *x: self.process_word(word, True),
             "/upd": lambda word, *x: self.process_word(word, True),
-            "specific": lambda word, *x: self.process_word(word),
         }
 
-class WordTrainer(BaseWordApp):
-    """Class for trainer mode of the application."""
+    def run(self) -> None:
+        super().run("Word")
+    
+class WordsTutor(BaseWordApp):
     def __init__(self):
         super().__init__()
         self.used_words = set()
         self.category = ""
-        self._specific_command_handlers = {
-            'specific': lambda category, *x: self.start_training(category),
-            "/l" : lambda word, *x: self.show_word(word),
-            "/lookup": lambda word, *x: self.show_word(word),
-            "/n" : lambda word, *x: self.process_word(word),
-            "/new" : lambda word, *x: self.process_word(word),
-            "/a" : lambda category, *x: self.show_current_words(category),
-            "/all" : lambda category, *x: self.show_current_words(category),
-            }
+        self._specific_command_handlers = self._get_specific_command_handlers()
 
+    def _get_specific_command_handlers(self) -> Dict:
+        return {
+            'specific': lambda category, *x: self.start_training(category),
+            "/l": lambda word, *x: self.show_word(word),
+            "/lookup": lambda word, *x: self.show_word(word),
+            "/n": lambda word, *x: self.process_word(word),
+            "/new": lambda word, *x: self.process_word(word),
+            "/a": lambda category, *x: self.show_current_words(category),
+            "/all": lambda category, *x: self.show_current_words(category),
+        }
+    
     def run(self) -> None:
-        super().run()
+        super().run("Category")
+
+    def show_help(self) -> None:
+        super().show_help()
+        self.print_categories()
 
     def start_training(self, category: str, *args) -> Optional[str]:
         include_mastered = False
@@ -282,7 +300,7 @@ class WordTrainer(BaseWordApp):
             riddle = self.word_riddle(word)
             user_guess = ""
             while not user_guess:
-                user_guess = self.process_command("[green]Your guess > ")
+                user_guess = self.process_command("Your guess", run_specific=False)
 
             user_guess = self.game_conversation(word, riddle, user_guess)
             if not user_guess:
@@ -298,27 +316,27 @@ class WordTrainer(BaseWordApp):
         else:
             console.print(f'Word "{name}" not found.')
 
-    def show_current_words(self,category:str,*args) -> None:
-        """Show all words that are currently used in the training session."""
-        cat = category if category else self.category
-        self.show_all(cat)
-
-    def add_word(self, word: str) -> None:
-        """Add a new word to the database."""
+    def process_word(self, word: str) -> None:
+        """Process a new word."""
         layout = self.ui_manager.create_layout()
         with Live(layout, console=console, auto_refresh=False) as live:
             self.ui_manager.update_command_panel(layout, word)
             self.process_new_word(layout, word, False)
+
+    def show_current_words(self,category:str,*args) -> None:
+        """Show all words that are currently used in the training session."""
+        cat = category if category else self.category
+        self.show_all(cat)
             
     def start_game(self) -> Optional[str]:
-        check = self.process_command("[green]Are you ready?[white] >")
+        check = self.process_command("Are you ready?", run_specific=False)
         counter = 0
         while True:
             if check.strip().lower() in ["n", "no", "not ready", "not yet", "nope", "nah", "nay"]:
                 counter += 1
                 game = self.teacher.game_intro(counter)
                 self.draw_stream(game, mode='generate')
-                check = self.process_command("[green]Now? [white]> ")
+                check = self.process_command("Now?", run_specific=False)
             else:
                 break
 
@@ -331,7 +349,7 @@ class WordTrainer(BaseWordApp):
             while True :
                 answer = self.teacher.conversation(command, options=self.teacher.game_qa_options)
                 self.draw_stream(answer, mode='chat')
-                check = self.process_command("[green]Your guess >")
+                check = self.process_command("Your guess", run_specific=False)
                 if not check.strip().startswith("?") :
                     return check
                 else : command = check.strip()[1:]
@@ -368,8 +386,8 @@ class WordTrainer(BaseWordApp):
     def grade_guess(self, word: Word, guess: str) -> Optional[str]:
         if guess.strip().lower() == word.word.lower():
             console.print(f"{ROBOT_EMOJI} [green]Correct!\n [white]Literaly equals to the correct answer. Moving to the next word.\n")
-            self.word_manager.process_state(word.word, 1)
-            check = self.process_command(f"> ")
+            self.word_manager.process_word_state(word.word, 1)
+            check = self.process_command(f"> ", run_specific=False)
         else:
             grade = self.teacher.grader(word.word, guess)
             full_grade = f"{ROBOT_EMOJI} "
@@ -381,13 +399,218 @@ class WordTrainer(BaseWordApp):
 
             if full_grade.replace(ROBOT_EMOJI,'').strip().lower().startswith("correct"):
                 console.print("Moving to the next word.\n")
-                self.word_manager.process_state(word.word, 1)
+                self.word_manager.process_word_state(word.word, 1)
             else:
-                self.word_manager.process_state(word.word, -1)
-                check = self.process_command("Would you like to chat about this word? (y/n): ")
+                self.word_manager.process_word_state(word.word, -1)
+                check = self.process_command("[white]Would you like to chat about this word? (y/n):", run_specific=False)
                 if check.lower() == "y":
                     check = self.chat_mode(word.word)
 
     def print_training_stats(self, category: str = None) -> None:
-        self.ui_manager.show_training_stats(console, self.word_manager, category)
+        self.ui_manager.show_words_stats(console, self.word_manager, category)
+
+
+class VerbsTutor(BaseWordApp):
+    """Class for irregular verb mode of the application."""
+    def __init__(self):
+        super().__init__()
+        self._specific_command_handlers = self._get_specific_command_handlers()
+        self.used_verbs = set()
+
+    def _get_specific_command_handlers(self) -> Dict:
+        return {
+            'specific': lambda verb, *x: self.handle_verb_command(verb),
+            "/nv": lambda verb, *x: self.add_verb(verb),
+            "/newverb": lambda verb, *x: self.add_verb(verb),
+            "/dv": lambda verb, *x: self.delete_verb(verb),
+            "/delverb": lambda verb, *x: self.delete_verb(verb),
+            "/iv": lambda verb, *x: self.show_verb_info(verb),
+            "/infoverb": lambda verb, *x: self.show_verb_info(verb),
+            "/av": lambda *x: self.show_all_verbs(),
+            "/allverbs": lambda *x: self.show_all_verbs(),
+            "/cv": lambda verb, *x: self.verb_conversation(verb),
+            "/convverb": lambda verb, *x: self.verb_conversation(verb),
+            "/g": lambda *x: self.practice_mode(),
+            "/game": lambda *x: self.practice_mode(),
+        }
+    
+    def run(self) -> None:
+        super().run("Verb")
+
+    def handle_verb_command(self, verb: str) -> None:
+        if verb:
+            word = self.word_manager.get_irregular_verb(verb)
+            if word:
+                console.print(word)
+                self.word_manager.process_verb_state(verb, -1)
+                self.word_manager.increment_verb_counter(verb)
+            else:
+                console.print(f"Verb '{verb}' not found.")
+
+    def add_verb(self, verb) -> None:        
+        base_form = verb
+        past_simple = self.process_command("Enter past simple form", run_specific=False)
+        past_participle = self.process_command("Enter past participle form", run_specific=False)
         
+        verb = IrregularVerb(base_form, past_simple, past_participle, 1, 0)
+        self.word_manager.add_irregular_verb(verb)
+        console.print("[green]Verb added successfully![/green]")
+        self.show_verbs_stats()
+
+    def delete_verb(self, verb: str) -> None:
+        check = self.process_command(f'[red]Are you sure to delete the verb "[green]{verb}[red]"? [white]y/n', run_specific=False)
+        if check.strip() == "y":
+            is_deleted = self.word_manager.delete_irregular_verb(verb)
+            if is_deleted:
+                console.print(f'\nVerb "{verb}" has been deleted.\n')
+            else:
+                console.print(f'\nVerb "{verb}" not found.\n')
+
+    def show_verbs_stats(self, *args) -> None:
+        verbs = self.word_manager.get_all_irregular_verbs()
+        self.ui_manager.show_verbs_stats(console, verbs)
+
+    def show_all_verbs(self) -> None:
+        self.ui_manager.show_all_verbs(console, self.word_manager)
+
+    def select_verb(self, verbs: List[IrregularVerb], include_mastered: bool = False) -> Optional[IrregularVerb]:
+        if not include_mastered:
+            verbs = [v for v in verbs if v.state is not None and v.state < len(STATES) - 1]
+        else:
+            verbs = [v for v in verbs if v.state is not None]
+
+        available_verbs = [v for v in verbs if v.base_form not in self.used_verbs]
+        
+        if not available_verbs:
+            return None
+
+        weights = [max(1, len(STATES) - (v.state or 0)) for v in available_verbs]
+        weights = [float(w)/sum(weights) for w in weights]
+        selected_verb = random.choices(available_verbs, weights=weights, k=1)[0]
+        self.used_verbs.add(selected_verb.base_form)
+        return selected_verb
+
+    def practice_mode(self,include_mastered=False, *args) -> None:
+        available_verbs = self.word_manager.get_all_irregular_verbs()
+        
+        while True:
+            self.show_verbs_stats()
+            verb = self.select_verb(available_verbs, include_mastered)
+            if not verb:
+                console.print("No more verbs available for training. Resetting used verbs.")
+                self.used_verbs.clear()
+                verb = self.select_verb(available_verbs, include_mastered)
+                if not verb:
+                    console.print("No verbs available for training.")
+                    break
+
+            console.print(f"\n[green]Base form: [white]{verb.base_form}")
+            past_simple = self.process_command("Past simple form:", run_specific=False)
+            past_participle = self.process_command("Participle form:", run_specific=False)
+            
+            if past_simple == verb.past_simple and past_participle == verb.past_participle:
+                console.print("[green]Correct![/green]")
+                self.word_manager.process_verb_state(verb.base_form, 1)
+            else:
+                console.print(f"[red]Incorrect. The correct forms are:[/red]")
+                console.print(f"[green]Past Simple: [white]{verb.past_simple}")
+                console.print(f"[green]Past Participle: [white]{verb.past_participle}")
+
+                responce = self.process_command(f'Do you whant to speak about "[white]{verb.base_form}[green]"? (y/n):', run_specific=False)
+                if responce.lower() == "y":
+                    self.verb_conversation(query=verb.base_form)
+
+    def verb_conversation(self, query: str) -> None:
+        if not query:
+            return
+        verb = self.word_manager.get_irregular_verb(query)
+        if not verb :
+            console.print(f"\nVerb '{verb}' not found.\n")
+            return
+
+        self.teacher.init_verbs(verb=verb)
+        is_first = True
+        while True:
+            user_input = "Hello!" if is_first else self.get_multiline_input()
+            is_first = False
+            if not user_input:
+                continue
+            is_command, action, args = self.parse_command(user_input, None)
+            if is_command:
+                check = self.handle_specific_action(action, [args])
+                if check == "bye":
+                    break
+                else:
+                    continue
+            answer = self.teacher.conversation(user_input, options=self.teacher.verbs_options)
+            self.display_chat_answer(answer)
+
+class GrammarTutor(BaseWordApp):
+    """Class for grammar rules mode of the application."""
+    def __init__(self):
+        super().__init__()
+        self._specific_command_handlers = self._get_specific_command_handlers()
+
+    def _get_specific_command_handlers(self) -> Dict:
+        return {
+            'specific': lambda theme, *x: self.start_theme_conversation(theme),
+            "/nt": lambda theme, *x: self.add_theme(theme),
+            "/newtheme": lambda theme, *x: self.add_theme(theme),
+            "/dt": lambda theme, *x: self.delete_theme(theme),
+            "/deltheme": lambda theme, *x: self.delete_theme(theme),
+            "/at": lambda *x: self.show_all_themes(),
+            "/allthemes": lambda *x: self.show_all_themes(),
+        }
+
+    def run(self) -> None:
+        super().run("Select theme")
+
+    def add_theme(self, theme: str) -> None:
+        name = self.process_command("Enter theme name", run_specific=False)
+        description = self.process_command("Enter theme description", run_specific=False)
+        self.word_manager.add_grammar_theme(GrammarTheme(name, description))
+        console.print("[green]Theme added successfully![/green]")
+        self.list_themes()
+
+    def delete_theme(self, theme: str) -> None:
+        check = self.process_command(f'[red]Are you sure to delete the theme "[green]{theme}[red]"? [white]y/n', run_specific=False)
+        if check.strip() == "y":
+            is_deleted = self.word_manager.delete_grammar_theme(theme)
+            if is_deleted:
+                console.print(f'\nTheme "{theme}" has been deleted.\n')
+            else:
+                console.print(f'\nTheme "{theme}" not found.\n')
+
+    def list_themes(self) -> None:
+        themes = self.word_manager.get_all_grammar_themes()
+        self.ui_manager.show_grammar_themes(console, themes)
+
+    def show_all_themes(self) -> None:
+        self.ui_manager.show_all_themes(console, self.word_manager)
+
+    def start_theme_conversation(self, query: str) -> None:
+        if not query:
+            return
+        theme = self.word_manager.get_grammar_theme(query)
+        if not theme :
+            console.print(f"\nTheme '{query}' not found.\n")
+            return
+
+        self.teacher.init_grammar(topic=theme.name, description=theme.description)
+        is_first = True
+        while True:
+            user_input = "Hello!" if is_first else self.get_multiline_input()
+            is_first = False
+            if not user_input:
+                continue
+            is_command, action, args = self.parse_command(user_input, None)
+            if is_command:
+                check = self.handle_specific_action(action, [args])
+                if check == "bye":
+                    break
+                else:
+                    continue
+            elif not action:
+                continue
+            answer = self.teacher.conversation(user_input, options=self.teacher.grammar_options)
+            self.display_chat_answer(answer)

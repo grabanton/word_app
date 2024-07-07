@@ -35,12 +35,12 @@ class MyPager:
             self.draw_screen(stdscr, start_line)
             key = stdscr.getch()
 
-            if key == curses.KEY_UP and start_line > 0:
+            if key == ord('q'):
+                return
+            elif ( key == curses.KEY_UP or key == ord('k') ) and start_line > 0:
                 start_line -= 1
-            elif key == curses.KEY_DOWN and start_line < len(self.lines) - len(self.rendered_header) - 1:
+            elif ( key == curses.KEY_DOWN or key == ord('j') ) and start_line < len(self.lines) - len(self.rendered_header) - 1:
                 start_line += 1
-            elif key == ord('q'):
-                break
 
     def run(self) -> None:
         curses.wrapper(self.main)

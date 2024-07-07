@@ -1,5 +1,5 @@
 import typer
-from .english import WordDictionary, WordTrainer
+from .english import WordDictionary, WordsTutor, VerbsTutor, GrammarTutor
 
 app = typer.Typer(
     name="eng",
@@ -16,7 +16,19 @@ def dictionary():
 @app.command()
 def trainer():
     """Start the training session."""
-    app = WordTrainer()
+    app = WordsTutor()
+    app.run()
+
+@app.command()
+def verbs():
+    """Run the irregular verb mode."""
+    app = VerbsTutor()
+    app.run()
+
+@app.command()
+def grammar():
+    """Run the grammar rules mode."""
+    app = GrammarTutor()
     app.run()
 
 @app.callback(invoke_without_command=True)

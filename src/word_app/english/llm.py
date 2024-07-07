@@ -21,6 +21,8 @@ class Teacher:
         self.system_game_intro = self._load_prompt('game_intro')
         self.system_game_qa = self._load_prompt('game_qa')
         self.system_grader = self._load_prompt('grader')
+        self.system_grammar = self._load_prompt('grammar')
+        self.system_verbs = self._load_prompt('verbs')
 
         self.explain_options = self._load_options('explain')
         self.translate_options = self._load_options('translate')
@@ -29,6 +31,8 @@ class Teacher:
         self.game_intro_options = self._load_options('game_intro')
         self.game_qa_options = self._load_options('game_qa')
         self.grader_options = self._load_options('grader')
+        self.grammar_options = self._load_options('grammar')
+        self.verbs_options = self._load_options('verbs')
 
         self.chat_history = []
 
@@ -67,6 +71,20 @@ class Teacher:
         self.chat_history = [{
             'role': 'system',
             'content': self.system_game_qa.format(word=word, mode=mode)
+        }]
+
+    def init_verbs(self, verb: str) -> None:
+        """Append the initial system message to the chat history."""
+        self.chat_history = [{
+            'role': 'system',
+            'content': self.system_verbs.format(verb=verb)
+        }]
+
+    def init_grammar(self, topic: str, description: str) -> None:
+        """Append the initial system message to the chat history."""
+        self.chat_history = [{
+            'role': 'system',
+            'content': self.system_grammar.format(topic=topic, description=description)
         }]
 
     def append_content(self, content: str, role: str='assistant') -> None:
