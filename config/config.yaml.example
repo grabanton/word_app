@@ -17,6 +17,8 @@ llm:
         game_intro: game_intro.txt
         game_qa: game_qa.txt
         grader: grender.txt
+        verbs: verb_conversation.txt
+        grammar: grammar_conversation.txt
 
   options:
     generic:
@@ -27,15 +29,19 @@ llm:
       translate:
         temperature: 0.3
       conversation:
-        temperature: 0.7
+        temperature: 0.5
       riddle:
-        temperature: 0.7
+        temperature: 0.5
       game_intro:
         temperature: 1.0
       game_qa:
         temperature: 0.7
       grader:
         temperature: 0.0
+      verbs:
+        temperature: 0.5
+      grammar:
+        temperature: 0.7
 
 database:
   path: ../.data/words_database.db

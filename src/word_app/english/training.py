@@ -160,7 +160,7 @@ class BaseWordApp:
         with Live(layout, console=console, auto_refresh=False) as live:
             explanation_text, translation_text = self.generate_explanations(word, layout, live)
         warning = " ([red]Previous word data will be lost[white])" if rewrite else ""
-        answer = self.process_command(f'Save the word?{warning} : [yellow]y [magenta]optional[white](category) or press Enter to skip')
+        answer = self.process_command(f'Save the word?{warning} : [yellow]y [magenta]optional[white](category) or press Enter to skip', run_specific=False)
         answer = answer.lower()
         if answer.startswith("y"):
             category = answer.replace("y", "").strip()
