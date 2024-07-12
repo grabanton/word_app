@@ -32,6 +32,9 @@ class Config:
 
     def get_llm_config(self) -> Dict:
         return self.config['llm']
+    
+    def get_voice_config(self) -> Dict:
+        return self.config['voice']
 
     def get_database_path(self):
         return self._resolve_path(self.config['database']['path'])
@@ -54,3 +57,6 @@ def get_database_path() -> str:
 
 def get_prompt_path(prompt_name) -> str:
     return config.get_prompt_path(prompt_name)
+
+def get_voice_config() -> Dict:
+    return config.get_voice_config()

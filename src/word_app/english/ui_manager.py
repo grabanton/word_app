@@ -87,12 +87,14 @@ class UIManager:
             ("/h, /help", "Show this help message"),
             ("/q, /quit", "Quit the current mode"),
             ("/i, /info {word}", "Show information about a word"),
+            ("/n, /new {word}", "Explain a new word and add it to the database"),
+            ('/m, /man {word}', "Manually update word's category and state"),
             ("/ct, /cat", "Show all used categories"),
             ("/a, /all {category}", "Show all saved words in a specified category"),
             ("/d, /del {word}", "Delete a word from the database"),
             ("/c, /conv {word}", "Start a chat about a word or phrase"),
             ("/b, /bye", "End the current chat session (chat mode only)"),
-            ("/m, /man {word}", "Manually update word's category and state"),
+            ("/say {text}", "Say a text using the text-to-speech engine"),
         ]
 
         specific_commands = {
@@ -102,13 +104,13 @@ class UIManager:
             ],
             "wordstutor": [
                 ("/l, /lookup {word}", "Look up a specific word"),
-                ("/n, /new {word}", "Explain a new word and add it to the database"),
                 ("/?, /question", "Ask for more information about the current word (guess mode)"),
                 ("{category}", "Start training with words from the specified category"),
             ],
             "verbstutor": [
                 ("/nv, /newverb {verb}", "Add new irregular verb"),
                 ("/dv, /delverb {verb}", "Delete an irregular verb"),
+                ('/iv, /infoverb {verb}', "Show information about an irregular verb"),
                 ("/av, /allverbs", "List of all avalable irregular verbs"),
                 ("/cv, /convverb {verb}", "Start a conversation about an irregular verb"),
                 ("/g, /game", "Play a game with irregular verbs"),

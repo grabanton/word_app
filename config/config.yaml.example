@@ -46,6 +46,13 @@ llm:
 database:
   path: ../.data/words_database.db
 
+voice:
+  base_url: http://localhost:8000/v1
+  api_key: sk-111111111
+  chunk_size: 8192
+  model: tts-1
+  voice: shimmer
+
 app:
   debug: false
   log_level: INFO

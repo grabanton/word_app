@@ -8,6 +8,7 @@ import re
 from .word_manager import WordManager, Word, IrregularVerb, GrammarTheme, STATES
 from .ui_manager import UIManager
 from .llm import Teacher
+from ..utils import Voice
 
 
 ROBOT_EMOJI = "\U0001F916"
@@ -19,6 +20,8 @@ class BaseWordApp:
         self.word_manager = WordManager()
         self.ui_manager = UIManager()
         self.teacher = Teacher()
+        self.voice = Voice()
+        self.last_output = None
         self._base_command_handlers = self._get_base_command_handlers()
         self._specific_command_handlers = self._get_specific_command_handlers()
 
@@ -40,7 +43,10 @@ class BaseWordApp:
         "/help": lambda *x: self.show_help(),
         "/i": lambda word, *x: self.show_word_info(word),
         "/info": lambda word, *x: self.show_word_info(word),
+        "/n": lambda word, *x: self.process_word(word),
+        "/new": lambda word, *x: self.process_word(word),
         "/m": lambda word, *x: self.manual_update(word),
+        "/man": lambda word, *x: self.manual_update(word),
         "/ct": lambda *x: self.print_categories(),
         "/cat": lambda *x: self.print_categories(),
         "/a": lambda category, *x: self.show_all(category),
@@ -52,6 +58,7 @@ class BaseWordApp:
         "/q": lambda *x: exit(),
         "/quit": lambda *x: exit(),
         "/bye": lambda *x: "bye",
+        "/say": lambda text, *x: self.speak(text),
     }
 
     def handle_action(self, action: str, args: List = []) -> Optional[str]:
@@ -100,6 +107,29 @@ class BaseWordApp:
                 self.handle_specific_action('specific', [command])
         return command
 
+    def process_word(self, command: str, is_update: bool=False) -> None:
+        """Process a word. Or update an existing one."""
+        layout: Layout = self.ui_manager.create_layout()
+        self.ui_manager.update_command_panel(layout, command)
+        word = self.word_manager.fetch_word(command)
+        if word and not is_update:
+            self.display_existing_word(layout, word)
+            self.last_output = word.explanation_en
+        elif command.strip():
+            self.process_new_word(layout, command, is_update)
+
+    def process_new_word(self, layout: Layout, word: str, rewrite: bool) -> None:
+        """Process a new word. Or rewrite an existing one."""
+        with Live(layout, console=console, auto_refresh=False) as live:
+            explanation_text, translation_text = self.generate_explanations(word, layout, live)
+        self.last_output = explanation_text
+        warning = " ([red]Previous word data will be lost[white])" if rewrite else ""
+        answer = self.process_command(f'Save the word?{warning} : [yellow]y [magenta]optional[white](category) or press Enter to skip', run_specific=False)
+        answer = answer.lower()
+        if answer.startswith("y"):
+            category = answer.replace("y", "").strip()
+            self.word_manager.insert_word(word, category, explanation_text, translation_text)
+
     def display_existing_word(self, layout: Layout, word: Word) -> None:
         """Display an existing word in the database."""
         with Live(layout, console=console, refresh_per_second=4) as live:
@@ -144,27 +174,6 @@ class BaseWordApp:
                 console.print(f'\n"{word}" not found.\n')
         else:
             console.print("\nDeletion cancelled.\n")
-
-    def process_word(self, command: str, is_update: bool=False) -> None:
-        """Process a word. Or update an existing one."""
-        layout: Layout = self.ui_manager.create_layout()
-        self.ui_manager.update_command_panel(layout, command)
-        word = self.word_manager.fetch_word(command)
-        if word and not is_update:
-            self.display_existing_word(layout, word)
-        elif command.strip():
-            self.process_new_word(layout, command, is_update)
-
-    def process_new_word(self, layout: Layout, word: str, rewrite: bool) -> None:
-        """Process a new word. Or rewrite an existing one."""
-        with Live(layout, console=console, auto_refresh=False) as live:
-            explanation_text, translation_text = self.generate_explanations(word, layout, live)
-        warning = " ([red]Previous word data will be lost[white])" if rewrite else ""
-        answer = self.process_command(f'Save the word?{warning} : [yellow]y [magenta]optional[white](category) or press Enter to skip', run_specific=False)
-        answer = answer.lower()
-        if answer.startswith("y"):
-            category = answer.replace("y", "").strip()
-            self.word_manager.insert_word(word, category, explanation_text, translation_text)
 
     def generate_explanations(self, word: str, layout: Layout, live: Live) -> Tuple[str, str]:
         """Generate explanations and translations for a given word."""
@@ -213,6 +222,7 @@ class BaseWordApp:
                 token = chunk['message']['content'] if mode == 'chat' else chunk['response']
                 full_answer += token
                 self.ui_manager.update_converation_output(full_answer, live)
+            self.last_output = full_answer
             return full_answer
 
     def get_multiline_input(self) -> str:
@@ -234,6 +244,12 @@ class BaseWordApp:
 
     def print_categories(self, *args) -> None:
         self.ui_manager.show_categories(console, self.word_manager)
+
+    def speak(self, text: str) -> None:
+        """Speak the provided text."""
+        phrase = text if text else self.last_output
+        if phrase:
+            self.voice.speak(phrase)
 
 class WordDictionary(BaseWordApp):
     """Class for dictionary mode of the application."""
@@ -263,8 +279,6 @@ class WordsTutor(BaseWordApp):
             'specific': lambda category, *x: self.start_training(category),
             "/l": lambda word, *x: self.show_word(word),
             "/lookup": lambda word, *x: self.show_word(word),
-            "/n": lambda word, *x: self.process_word(word),
-            "/new": lambda word, *x: self.process_word(word),
             "/a": lambda category, *x: self.show_current_words(category),
             "/all": lambda category, *x: self.show_current_words(category),
         }
@@ -313,15 +327,9 @@ class WordsTutor(BaseWordApp):
         if word:
             layout = self.ui_manager.create_layout()
             self.display_existing_word(layout, word)
+            self.last_output = word.explanation_en
         else:
             console.print(f'Word "{name}" not found.')
-
-    def process_word(self, word: str) -> None:
-        """Process a new word."""
-        layout = self.ui_manager.create_layout()
-        with Live(layout, console=console, auto_refresh=False) as live:
-            self.ui_manager.update_command_panel(layout, word)
-            self.process_new_word(layout, word, False)
 
     def show_current_words(self,category:str,*args) -> None:
         """Show all words that are currently used in the training session."""
@@ -381,6 +389,7 @@ class WordsTutor(BaseWordApp):
             for chunk in riddle:
                 full_riddle += chunk['response']
                 self.ui_manager.update_converation_output(full_riddle, live)
+            self.last_output = full_riddle
             return full_riddle
 
     def grade_guess(self, word: Word, guess: str) -> Optional[str]:
@@ -395,7 +404,7 @@ class WordsTutor(BaseWordApp):
                 for chunk in grade:
                     full_grade += chunk['response']
                     self.ui_manager.update_converation_output(full_grade, live)
-
+            self.last_output = full_grade
 
             if full_grade.replace(ROBOT_EMOJI,'').strip().lower().startswith("correct"):
                 console.print("Moving to the next word.\n")
