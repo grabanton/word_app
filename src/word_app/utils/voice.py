@@ -1,4 +1,4 @@
-import sys
+import re
 import openai
 import io
 import logging
@@ -36,7 +36,9 @@ class Voice:
 
     def cleanup_text(self, text:str) -> str:
         """Remove all non digits and alphabets from the text"""
-        return ''.join(e for e in text if e.isalnum() or e.isspace())
+        clean_text = ''.join(e for e in text if e.isalnum() or e.isspace())
+        clean_text = re.sub(r'\n+', '. ', clean_text)
+        return clean_text
 
     def speak(self, text:str) -> None:
         phrase = self.cleanup_text(text)
@@ -45,8 +47,7 @@ class Voice:
             with self.client.audio.speech.with_streaming_response.create(
                 model=self.model,
                 voice=self.voice,
-                input=phrase,
-                response_format='wav'
+                input=phrase
             ) as response:
                 logging.debug("Received response from TTS server")
                 audio_stream = response.iter_bytes(chunk_size=self.chunk_size)
