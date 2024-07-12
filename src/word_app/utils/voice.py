@@ -16,7 +16,9 @@ class Voice:
         api_key = config['api_key']
         self.voice = config['voice']
         self.model = config['model']
-        self.chunk_size = config['chunk_size']
+        self.sample_rate = config['audio']['sample_rate']
+        self.buffer_size = config['audio']['buffer_size']
+        self.chunk_size = config['audio']['stream_chunk_size']
         self.client = openai.OpenAI(
             api_key=api_key,
             base_url=base_url
@@ -26,7 +28,7 @@ class Voice:
         return get_voice_config()
 
     def play_audio(self, audio_data: bytes) -> None:
-        pygame.mixer.init()
+        pygame.mixer.init(frequency=self.sample_rate, buffer=self.buffer_size)
         sound = pygame.mixer.Sound(io.BytesIO(audio_data))
         channel = sound.play()
         while channel.get_busy():
@@ -43,7 +45,8 @@ class Voice:
             with self.client.audio.speech.with_streaming_response.create(
                 model=self.model,
                 voice=self.voice,
-                input=phrase
+                input=phrase,
+                response_format='wav'
             ) as response:
                 logging.debug("Received response from TTS server")
                 audio_stream = response.iter_bytes(chunk_size=self.chunk_size)
