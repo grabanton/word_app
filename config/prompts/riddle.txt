@@ -12,7 +12,26 @@
         2. Any variations of the {mode} (e.g., plural, tense changes, synonyms)
         3. Parts of the {mode} if it's a multi-word phrase
     - Create a concise explanation that describes the {mode} without directly stating it.
-    - Limit your explanation to a maximum of 3 sentences.
+    - Limit your explanation to just one sentence.
     - Use vocabulary suitable for a middle school level.
     - Ensure your clues are clear and specific enough to lead to the {mode}.
     - Double-check your response to confirm the {mode} is not used in any way.
+
+# Important: 
+    - Don't add any introduction, conclusion, or irrelevant information. Only the explanation is needed.
+    - Don't and the {mode} in any part of the sentence.
+    - The right format of the output is critical.
+
+# Explamples of the right output format:
+Assistant: "A figure with three sides and three angles."
+
+Assistant: "A device used for talking to someone far away."
+
+Assistant: "A vehicle that travels underwater."
+
+Assistant: "A piece of furniture used for sleeping."
+
+Assistant: "A machine that converts sound into electrical signals."
+
+
+

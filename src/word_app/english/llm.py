@@ -112,10 +112,10 @@ class Teacher:
     def translator(self, text: str) -> Generator[dict, None, None]:
         """Translate a text from English to a selected language. Using a translator model."""
         prompt = f'The text to translate:\n{text}'
-        print(self.translator_model)
-        print(self.translate_options)
-        print(self.system_translate)
-        print(prompt)
+        # print(self.translator_model)
+        # print(self.translate_options)
+        # print(self.system_translate)
+        # print(prompt)
 
         return self.text_gen(prompt, 
                              model=self.translator_model, 
