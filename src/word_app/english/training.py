@@ -22,6 +22,7 @@ class BaseWordApp:
         self.teacher = Teacher()
         self.voice = Voice()
         self.last_output = None
+        self.auto_speak = False
         self._base_command_handlers = self._get_base_command_handlers()
         self._specific_command_handlers = self._get_specific_command_handlers()
 
@@ -59,6 +60,7 @@ class BaseWordApp:
         "/quit": lambda *x: exit(),
         "/bye": lambda *x: "bye",
         "/say": lambda text, *x: self.speak(text),
+        "/voice": lambda mode, *x : self.set_speak_mode(mode),
     }
 
     def handle_action(self, action: str, args: List = []) -> Optional[str]:
@@ -106,6 +108,10 @@ class BaseWordApp:
             elif run_specific:
                 self.handle_specific_action('specific', [command])
         return command
+    
+    def speak_output(self) -> None:
+        if self.auto_speak:
+            self.speak(self.last_output)
 
     def process_word(self, command: str, is_update: bool=False) -> None:
         """Process a word. Or update an existing one."""
@@ -115,6 +121,7 @@ class BaseWordApp:
         if word and not is_update:
             self.display_existing_word(layout, word)
             self.last_output = word.explanation_en
+            self.speak_output()
         elif command.strip():
             self.process_new_word(layout, command, is_update)
 
@@ -123,6 +130,7 @@ class BaseWordApp:
         with Live(layout, console=console, auto_refresh=False) as live:
             explanation_text, translation_text = self.generate_explanations(word, layout, live)
         self.last_output = explanation_text
+        self.speak_output()
         warning = " ([red]Previous word data will be lost[white])" if rewrite else ""
         answer = self.process_command(f'Save the word?{warning} : [yellow]y [magenta]optional[white](category) or press Enter to skip', run_specific=False)
         answer = answer.lower()
@@ -223,6 +231,7 @@ class BaseWordApp:
                 full_answer += token
                 self.ui_manager.update_converation_output(full_answer, live)
             self.last_output = full_answer
+            self.speak_output()
             return full_answer
 
     def get_multiline_input(self) -> str:
@@ -250,6 +259,15 @@ class BaseWordApp:
         phrase = text if text else self.last_output
         if phrase:
             self.voice.speak(phrase)
+
+    def set_speak_mode(self, mode: str) -> None:
+        """Set the auto-speak mode."""
+        if mode == "on":
+            self.auto_speak = True
+        elif mode == "off":
+            self.auto_speak = False
+        else:
+            console.print(f"[red]Unknown mode: {mode}[/red]")
 
 class WordDictionary(BaseWordApp):
     """Class for dictionary mode of the application."""
@@ -328,6 +346,7 @@ class WordsTutor(BaseWordApp):
             layout = self.ui_manager.create_layout()
             self.display_existing_word(layout, word)
             self.last_output = word.explanation_en
+            self.speak_output()
         else:
             console.print(f'Word "{name}" not found.')
 
@@ -390,6 +409,7 @@ class WordsTutor(BaseWordApp):
                 full_riddle += chunk['response']
                 self.ui_manager.update_converation_output(full_riddle, live)
             self.last_output = full_riddle
+            self.speak_output()
             return full_riddle
 
     def grade_guess(self, word: Word, guess: str) -> Optional[str]:
@@ -405,6 +425,7 @@ class WordsTutor(BaseWordApp):
                     full_grade += chunk['response']
                     self.ui_manager.update_converation_output(full_grade, live)
             self.last_output = full_grade
+            self.speak_output()
 
             if full_grade.replace(ROBOT_EMOJI,'').strip().lower().startswith("correct"):
                 console.print("Moving to the next word.\n")
@@ -540,7 +561,7 @@ class VerbsTutor(BaseWordApp):
         self.teacher.init_verbs(verb=verb)
         is_first = True
         while True:
-            user_input = "Hello!" if is_first else self.get_multiline_input()
+            user_input = f"!!g Hello! let's speak about the  irregular verb {verb.base_form}" if is_first else self.get_multiline_input()
             is_first = False
             if not user_input:
                 continue

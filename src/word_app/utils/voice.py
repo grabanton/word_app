@@ -32,13 +32,22 @@ class Voice:
         sound = pygame.mixer.Sound(io.BytesIO(audio_data))
         channel = sound.play()
         while channel.get_busy():
-            pygame.time.wait(100)
+            pygame.time.wait(5000)
 
-    def cleanup_text(self, text:str) -> str:
-        """Remove all non digits and alphabets from the text"""
-        clean_text = ''.join(e for e in text if e.isalnum() or e.isspace())
-        clean_text = re.sub(r'\n+', '. ', clean_text)
-        return clean_text
+    def cleanup_text(self, text):
+        # Заменяем переносы строк на пробелы, добавляя точку, если перед переносом не было точки
+        text = re.sub(r'([^.\n])\n', r'\1. ', text)
+        text = re.sub(r'\n', ' ', text)
+        
+        # Заменяем слеш на запятую
+        text = text.replace('/', ',')
+        
+        # Оставляем только буквы, цифры, знаки препинания, кавычки и пробелы
+        text = re.sub(r'[^a-zA-Zа-яА-Я0-9\s.,!?:;()\-"\'«»]', '', text)
+        
+        # Убираем множественные пробелы
+        text = re.sub(r'\s+', ' ', text)
+        return text.strip()
 
     def speak(self, text:str) -> None:
         phrase = self.cleanup_text(text)

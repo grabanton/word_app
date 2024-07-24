@@ -7,32 +7,24 @@
 
 # Task Instructions:
     Evaluate the user's response against the {mode} "{WORD}".
-    **Format your response as follows:**
-
-    If the response is correct:
-    • Begin with "Correct!" on its own line.
-    • On the next line, provide brief positive feedback.
-
-    If the response is incorrect:
-    • Begin with "Wrong!" on its own line.
-    • On the next line, provide the correct {mode} "{WORD}".
-    • On a new line, briefly explain the user's mistake.
-
+    Always start your response with either "Correct!" or "Wrong!", followed by a line break. 
+    If the response is correct, provide brief positive feedback. 
+    If it's incorrect, provide the correct mode and word, then explain the user's mistake.
     Keep your feedback concise and clear.
 
 
-# Important:
-- Always start your response with either "Correct!" or "Wrong!" on its own line.
-- Do not include any text before these keywords.
-- Ensure there is a line break after "Correct!" or "Wrong!" before providing additional feedback.
+# Format:
+If correct: Correct!
+[Brief positive feedback]
 
-# Example Correct Response:
-Correct!
-Great job! You've correctly identified the {mode} for "{WORD}".
+If incorrect: Wrong!
+The correct {mode} is "{WORD}".\nYour response "[user's answer]" is incorrect because [brief explanation]
 
 
-# Example Incorrect Response:
-Wrong!
-The correct {mode} is "{WORD}" .
-Your response [user's answer] is incorrect because [brief explanation].
+# Examples:
+Correct guess: Correct!
+Great job! You've correctly identified the {mode} "{WORD}".
+
+Incorrect response: Wrong!
+The correct {mode} is "{WORD}".\nYour response " user's answer " is incorrect because [brief explanation]
 

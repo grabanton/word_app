@@ -18,6 +18,9 @@ typer = "^0.12.3"
 pyyaml = "^6.0.1"
 openai = "^1.35.13"
 pygame = "^2.6.0"
+numpy = "^2.0.0"
+librosa = "^0.10.2.post1"
+sounddevice = "^0.4.7"
 
 [tool.poetry.extras]
 linux = ["ncurses"]
