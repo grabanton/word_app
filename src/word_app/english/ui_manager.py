@@ -1,3 +1,4 @@
+import re
 from typing import Callable, List
 from rich.layout import Layout
 from rich.panel import Panel
@@ -11,7 +12,7 @@ from rich import box
 from math import floor
 from itertools import chain
 from .word_manager import Word, WordManager, IrregularVerb, GrammarTheme, STATES
-from ..utils import MyPager
+from ..utils import MyPager, Utils
 
 # Constants for appearance
 STYLE_LEFT = "rgb(200,180,120)"
@@ -179,13 +180,17 @@ class UIManager:
         console.print(table)
 
     @staticmethod
-    def show_all_words(console: Console, manager: WordManager, category:str = None) -> None:
+    def show_all_words(console: Console, manager: WordManager, category:str = None, word_count:int = -1) -> None:
         header = f"{'Word':<80} {'Category':<20} {'State'}"
         words = manager.fetch_words(category=category)
         words.sort(key=lambda w: f"{w.state}{w.word}")
         lines = []
         for w in words:
             word =w.word
+            if word_count > 0:
+                count = Utils.word_count(word)
+                if count != word_count:
+                    continue
             category = w.category if w.category else "Uncategorized"
             state = STATES[w.state]
             lines.append(f"  {word:<80} {category:<20} {state}")

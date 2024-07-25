@@ -23,6 +23,7 @@ class BaseWordApp:
         self.voice = Voice()
         self.last_output = None
         self.auto_speak = False
+        self.word_count = -1
         self._base_command_handlers = self._get_base_command_handlers()
         self._specific_command_handlers = self._get_specific_command_handlers()
 
@@ -157,7 +158,7 @@ class BaseWordApp:
     
     def show_all(self, category: str, *args) -> None:
         """Show all words in the database."""
-        self.ui_manager.show_all_words(console, self.word_manager, category)
+        self.ui_manager.show_all_words(console, self.word_manager, category, self.word_count)
 
     def manual_update(self, word: str) -> None:
         """Interactively update a word's category and state from user input."""
@@ -401,7 +402,8 @@ class WordsTutor(BaseWordApp):
         return selected_word
 
     def word_riddle(self, word: Word) -> str:
-        riddle, count_clue = self.teacher.riddler(word.word)
+        riddle, count_clue, count = self.teacher.riddler(word.word)
+        self.word_count = count
         console.print(f"{ROBOT_EMOJI} [blue]{count_clue}")
         with Live(console=console, auto_refresh=False) as live:
             full_riddle = f"{ROBOT_EMOJI} "

@@ -2,6 +2,7 @@ from typing import Generator, Dict, Tuple
 import ollama
 import re
 from ..config import get_llm_config, get_prompt_path
+from ..utils import Utils
 
 DEFAULT_OPTIONS = {'temperature': 0.5, 'max_tokens': 2048}
 
@@ -138,8 +139,8 @@ class Teacher:
         system = self.system_riddle.format(mode=mode)
         return self.text_gen(prompt, 
                              system=system, 
-                             options=self.riddle_options), count_clue
-    
+                             options=self.riddle_options), count_clue, count
+       
     def grader(self, word: str, answer: str) -> Generator[dict, None, None]:
         """Grade the user's answer to the riddle."""
         prompt = f'The answer is "{answer}".'
@@ -151,7 +152,7 @@ class Teacher:
     
     def word_count(self, text: str) -> int:
         """Count the number of words in the text."""
-        return len( re.findall( r"[a-zA-Z']+", text ) )
+        return Utils.word_count(text)
     
     def get_mode(self, word: str) -> Tuple[str, int]:
         """Determine the mode of the game."""
