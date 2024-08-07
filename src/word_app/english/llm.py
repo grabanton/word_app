@@ -152,7 +152,7 @@ class Teacher:
     
     def word_count(self, text: str) -> int:
         """Count the number of words in the text."""
-        return Utils.word_count(text)
+        return Utils.count_words(text)
     
     def get_mode(self, word: str) -> Tuple[str, int]:
         """Determine the mode of the game."""

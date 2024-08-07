@@ -2,6 +2,7 @@ import os
 import yaml
 from pathlib import Path
 from typing import Dict
+import logging
 
 class Config:
     def __init__(self) -> None:
@@ -27,7 +28,7 @@ class Config:
         if not os.path.isabs(path):
             path = os.path.abspath(os.path.join(os.path.dirname(self.config_path), path))
         if not os.path.exists(path):
-            raise FileNotFoundError(f"File not found: {path}")
+            logging.info(f'Database not found. It will be initialized as {path}')
         return path
 
     def get_llm_config(self) -> Dict:

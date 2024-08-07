@@ -188,7 +188,7 @@ class UIManager:
         for w in words:
             word =w.word
             if word_count > 0:
-                count = Utils.word_count(word)
+                count = Utils.count_words(word)
                 if count != word_count:
                     continue
             category = w.category if w.category else "Uncategorized"
