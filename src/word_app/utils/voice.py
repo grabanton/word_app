@@ -3,6 +3,7 @@ import openai
 import io
 import logging
 import pygame
+import threading
 from ..config import get_voice_config
 
 class Voice:
@@ -32,7 +33,7 @@ class Voice:
         sound = pygame.mixer.Sound(io.BytesIO(audio_data))
         channel = sound.play()
         while channel.get_busy():
-            pygame.time.wait(5000)
+            pygame.time.wait(1000)
 
     def cleanup_text(self, text):
         # Заменяем переносы строк на пробелы, добавляя точку, если перед переносом не было точки
@@ -48,15 +49,19 @@ class Voice:
         # Убираем множественные пробелы
         text = re.sub(r'\s+', ' ', text)
         return text.strip()
-
+    
     def speak(self, text:str) -> None:
         phrase = self.cleanup_text(text)
+        voice = threading.Thread(target=self._speak,args=(phrase,))
+        voice.start()
+
+    def _speak(self, text:str) -> None:
         try:
             logging.debug("Sending text to TTS server")
             with self.client.audio.speech.with_streaming_response.create(
                 model=self.model,
                 voice=self.voice,
-                input=phrase
+                input=text
             ) as response:
                 logging.debug("Received response from TTS server")
                 audio_stream = response.iter_bytes(chunk_size=self.chunk_size)
