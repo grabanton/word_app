@@ -22,7 +22,7 @@ class BaseWordApp:
         self.teacher = Teacher()
         self.voice = Voice()
         self.last_output = None
-        self.auto_speak = False
+        self.auto_speak = True
         self.word_count = -1
         self._base_command_handlers = self._get_base_command_handlers()
         self._specific_command_handlers = self._get_specific_command_handlers()
@@ -416,7 +416,8 @@ class WordsTutor(BaseWordApp):
 
     def grade_guess(self, word: Word, guess: str) -> Optional[str]:
         if guess.strip().lower() == word.word.lower():
-            self.speak(f'Correct! Right answer is "{word.word}"')
+            if self.auto_speak:
+                self.speak(f'Correct! Right answer is "{word.word}"')
             console.print(f'{ROBOT_EMOJI} [green]Correct!\n [white]Right answer is "{word.word}".\n')
             self.word_manager.process_word_state(word.word, 1)
             check = self.process_command(f"> ", run_specific=False)
