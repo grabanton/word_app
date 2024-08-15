@@ -420,7 +420,6 @@ class WordsTutor(BaseWordApp):
                 self.speak(f'Correct! Right answer is "{word.word}"')
             console.print(f'{ROBOT_EMOJI} [green]Correct!\n [white]Right answer is "{word.word}".\n')
             self.word_manager.process_word_state(word.word, 1)
-            check = self.process_command(f"> ", run_specific=False)
         else:
             grade = self.teacher.grader(word.word, guess)
             full_grade = f"{ROBOT_EMOJI} "
