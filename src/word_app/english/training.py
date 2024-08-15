@@ -416,7 +416,8 @@ class WordsTutor(BaseWordApp):
 
     def grade_guess(self, word: Word, guess: str) -> Optional[str]:
         if guess.strip().lower() == word.word.lower():
-            console.print(f"{ROBOT_EMOJI} [green]Correct!\n [white]Literaly equals to the correct answer. Moving to the next word.\n")
+            self.speak(f'Correct! Right answer is "{word.word}"')
+            console.print(f'{ROBOT_EMOJI} [green]Correct!\n [white]Right answer is "{word.word}".\n')
             self.word_manager.process_word_state(word.word, 1)
             check = self.process_command(f"> ", run_specific=False)
         else:
