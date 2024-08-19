@@ -65,7 +65,7 @@ class UIManager:
 
     @staticmethod
     def update_converation_output(answer: str, live: Live) -> None:
-        markdown = Markdown(answer, style="blue")
+        markdown = Markdown(answer, style="rgb(100,180,255)")
         padded_markdown = Padding(markdown, (1,0))
         live.update(Group(padded_markdown))
         live.refresh()
@@ -96,6 +96,7 @@ class UIManager:
             ("/c, /conv {word}", "Start a chat about a word or phrase"),
             ("/b, /bye", "End the current chat session (chat mode only)"),
             ("/say {text}", "Say a text using the text-to-speech engine"),
+            ("/v, /voice {command}", "Change auto speech settings or interrupt the voice. Available commands: on/off/stop.")
         ]
 
         specific_commands = {

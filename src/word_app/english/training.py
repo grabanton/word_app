@@ -61,6 +61,7 @@ class BaseWordApp:
         "/quit": lambda *x: exit(),
         "/bye": lambda *x: "bye",
         "/say": lambda text, *x: self.speak(text),
+        "/v": lambda mode, *x: self.set_speak_mode(mode),
         "/voice": lambda mode, *x : self.set_speak_mode(mode),
     }
 
@@ -267,6 +268,8 @@ class BaseWordApp:
             self.auto_speak = True
         elif mode == "off":
             self.auto_speak = False
+        elif mode == "stop":
+            self.voice.stop_speaking()
         else:
             console.print(f"[red]Unknown mode: {mode}[/red]")
 

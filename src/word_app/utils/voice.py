@@ -20,6 +20,7 @@ class Voice:
         self.sample_rate = config['audio']['sample_rate']
         self.buffer_size = config['audio']['buffer_size']
         self.chunk_size = config['audio']['stream_chunk_size']
+        self.stop_playback = False
         self.client = openai.OpenAI(
             api_key=api_key,
             base_url=base_url
@@ -32,8 +33,9 @@ class Voice:
         pygame.mixer.init(frequency=self.sample_rate, buffer=self.buffer_size)
         sound = pygame.mixer.Sound(io.BytesIO(audio_data))
         channel = sound.play()
-        while channel.get_busy():
+        while channel.get_busy() and not self.stop_playback:
             pygame.time.wait(1000)
+        channel.stop()
 
     def cleanup_text(self, text):
         # Заменяем переносы строк на пробелы, добавляя точку, если перед переносом не было точки
@@ -51,9 +53,13 @@ class Voice:
         return text.strip()
     
     def speak(self, text:str) -> None:
+        self.stop_playback = False
         phrase = self.cleanup_text(text)
         voice = threading.Thread(target=self._speak,args=(phrase,))
         voice.start()
+    
+    def stop_speaking(self):
+        self.stop_playback = True
 
     def _speak(self, text:str) -> None:
         try:
@@ -70,7 +76,8 @@ class Voice:
                 
                 logging.debug(f"Audio data size: {len(audio_data)} bytes")
                 
-                self.play_audio(audio_data)
+                if not self.stop_playback:
+                    self.play_audio(audio_data)
                 
                 logging.debug("Finished playing audio")
         except Exception as e:
