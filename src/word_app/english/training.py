@@ -1,4 +1,5 @@
 import random
+from pprint import pprint
 from typing import Tuple, List, Dict, Generator, Optional
 from rich.console import Console
 from rich.layout import Layout
@@ -325,12 +326,15 @@ class WordsTutor(BaseWordApp):
             self.print_training_stats(self.category)
             word = self.select_word(available_words, include_mastered)
             if not word:
-                console.print("No more words available for training. Resetting used words.")
                 self.used_words.clear()
-                word = self.select_word(available_words, include_mastered)
-                if not word:
+                word_check = self.select_word(available_words, include_mastered)
+                if not word_check:
                     console.print("No words available for training.")
                     break
+                else:
+                    console.print("No more words are available for training.")
+                    user_input = self.process_command("Do you want to continue?")
+                    continue
 
             self.start_game()
             riddle = self.word_riddle(word)
@@ -389,17 +393,19 @@ class WordsTutor(BaseWordApp):
 
     def select_word(self, words: List[Word], include_mastered: bool = False) -> Optional[Word]:
         if not include_mastered:
-            words = [w for w in words if w.state is not None and w.state < len(STATES) - 1]
+            words_pool = [w for w in words if w.state is not None and w.state < len(STATES) - 1]
         else:
-            words = [w for w in words if w.state is not None]
-
-        available_words = [w for w in words if w.word not in self.used_words]
+            words_pool = [w for w in words if w.state is not None]
+        
+        available_words = [w for w in words_pool if w.word not in self.used_words]
         
         if not available_words:
             return None
 
         weights = [max(1, len(STATES) - (w.state or 0)) for w in available_words]
-        weights = [float(w)/sum(weights) for w in weights]
+        total_weight = sum(weights)
+        weights = [w/total_weight for w in weights]
+
         selected_word = random.choices(available_words, weights=weights, k=1)[0]
         self.used_words.add(selected_word.word)
         return selected_word
