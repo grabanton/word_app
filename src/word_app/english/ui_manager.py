@@ -105,6 +105,7 @@ class UIManager:
                 ("{word}", "Look up a word or phrase"),
             ],
             "wordstutor": [
+                ("/t, /turn", "Initiate a category selection procedure"),
                 ("/l, /lookup {word}", "Look up a specific word"),
                 ("/?, /question", "Ask for more information about the current word (guess mode)"),
                 ("{category}", "Start training with words from the specified category"),

@@ -93,6 +93,9 @@ class WordManager:
         
         self.conn.commit()
 
+    def is_category_available(self, category: str) -> bool:
+        return len(self.fetch_words(category)) > 0
+
     def insert_word(self, word: str, category: str, explanation_en: str, explanation_ru: str) -> None:
         """Insert a new word into the database. If the word already exists, update it."""
         self.cursor.execute("SELECT * FROM words WHERE word = ?", (word,))

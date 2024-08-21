@@ -294,47 +294,59 @@ class WordsTutor(BaseWordApp):
     def __init__(self):
         super().__init__()
         self.used_words = set()
+        self.available_words = []
         self.category = ""
         self._specific_command_handlers = self._get_specific_command_handlers()
+        self.include_mastered = False
 
     def _get_specific_command_handlers(self) -> Dict:
         return {
-            'specific': lambda category, *x: self.start_training(category),
+            'specific': lambda *x: self.start_training(),
             "/l": lambda word, *x: self.show_word(word),
             "/lookup": lambda word, *x: self.show_word(word),
             "/a": lambda category, *x: self.show_current_words(category),
             "/all": lambda category, *x: self.show_current_words(category),
+            "/t": lambda *x: self.prompt_to_set_category("Category"),
+            "/turn": lambda *x: self.prompt_to_set_category("Category")
         }
     
     def run(self) -> None:
-        super().run("Category")
+        super().run("Start training?")
 
-    def show_help(self) -> None:
-        super().show_help()
+    def prompt_to_set_category(self, prompt:str='Category', change_when_empty:bool=True) -> None:
         self.print_categories()
+        check = True
+        while check:
+            category = self.process_command(prompt, run_specific=False)
+            if not category or self.word_manager.is_category_available(category):
+                if change_when_empty or category:
+                    self.set_category(category)
+                check = False
 
-    def start_training(self, category: str, *args) -> Optional[str]:
+    def set_category(self, category:str) -> None:
         include_mastered = False
         if category.endswith(" --full"):
             category = category[:-7].strip()
             include_mastered = True
         
+        self.include_mastered = include_mastered
         self.category = category if category else None
-        available_words = self.word_manager.fetch_words(self.category)
-        
+        self.available_words = self.word_manager.fetch_words(self.category)
+        self.used_words.clear()
+
+    def start_training(self, *args) -> Optional[str]:
+        self.prompt_to_set_category("Category")
         while True:
             self.print_training_stats(self.category)
-            word = self.select_word(available_words, include_mastered)
+            word = self.select_word(self.available_words, self.include_mastered)
             if not word:
                 self.used_words.clear()
-                word_check = self.select_word(available_words, include_mastered)
-                if not word_check:
-                    console.print("No words available for training.")
-                    break
-                else:
-                    console.print("No more words are available for training.")
-                    user_input = self.process_command("Do you want to continue?")
-                    continue
+                console.print("No more words are available for training.")
+                self.prompt_to_set_category(
+                    "Skip to continue in the same category, or write a new one",
+                    change_when_empty=False,
+                )
+                continue
 
             self.start_game()
             riddle = self.word_riddle(word)
