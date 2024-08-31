@@ -106,6 +106,7 @@ class UIManager:
             ],
             "wordstutor": [
                 ("/t, /turn", "Initiate a category selection procedure"),
+                ("/mode {mode}", "Change words selection mode. Available options: normall, full. Full means include mastered words in the treaining set" )
                 ("/l, /lookup {word}", "Look up a specific word"),
                 ("/?, /question", "Ask for more information about the current word (guess mode)"),
                 ("{category}", "Start training with words from the specified category"),

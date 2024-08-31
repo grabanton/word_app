@@ -307,7 +307,8 @@ class WordsTutor(BaseWordApp):
             "/a": lambda category, *x: self.show_current_words(category),
             "/all": lambda category, *x: self.show_current_words(category),
             "/t": lambda *x: self.prompt_to_set_category("Category"),
-            "/turn": lambda *x: self.prompt_to_set_category("Category")
+            "/turn": lambda *x: self.prompt_to_set_category("Category"),
+            "/mode": lambda mode, *x: self.set_training_mode(mode),
         }
     
     def run(self) -> None:
@@ -323,13 +324,21 @@ class WordsTutor(BaseWordApp):
                     self.set_category(category)
                 check = False
 
+    def set_training_mode(self, mode:str) -> None:
+        if mode == "full":
+            self.include_mastered = True
+        elif mode == "normal":
+            self.include_mastered = False
+        else:
+            console.print(f"Wrong mode: {mode}")
+
     def set_category(self, category:str) -> None:
-        include_mastered = False
-        if category.endswith(" --full"):
-            category = category[:-7].strip()
-            include_mastered = True
+        # include_mastered = False
+        # if category.endswith(" --full"):
+        #     category = category[:-7].strip()
+        #     include_mastered = True
         
-        self.include_mastered = include_mastered
+        # self.include_mastered = include_mastered
         self.category = category if category else None
         self.available_words = self.word_manager.fetch_words(self.category)
         self.used_words.clear()
