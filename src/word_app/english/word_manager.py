@@ -253,3 +253,8 @@ class WordManager:
         self.cursor.execute('SELECT * FROM grammar_themes WHERE name = ?', (name,))
         result = self.cursor.fetchone()
         return GrammarTheme(*result) if result else None
+
+    def get_all_categories(self) -> List[str]:
+        """Fetch all unique categories from the database."""
+        self.cursor.execute("SELECT DISTINCT category FROM words ORDER BY category")
+        return [row[0] for row in self.cursor.fetchall() if row[0]]  # Exclude empty categories

@@ -6,6 +6,11 @@ from rich.console import Console
 from rich.layout import Layout
 from rich.live import Live
 from math import floor
+from prompt_toolkit import prompt
+from prompt_toolkit.completion import WordCompleter
+from prompt_toolkit.key_binding import KeyBindings
+from prompt_toolkit.filters import HasCompletions
+from prompt_toolkit.styles import Style
 
 from .word_manager import WordManager, Word, IrregularVerb, GrammarTheme, STATES
 from .ui_manager import UIManager
@@ -315,11 +320,42 @@ class WordsTutor(BaseWordApp):
     def run(self) -> None:
         super().run("Start training?")
 
-    def prompt_to_set_category(self, prompt:str='Category', change_when_empty:bool=True) -> None:
+    def category_autocompletion(self, guess:str) -> str:
+        categories = self.word_manager.get_all_categories()
+        completer = WordCompleter(categories, ignore_case=True)
+
+    def prompt_to_set_category(self, prompt_text:str='Category', change_when_empty:bool=True) -> None:
         self.print_categories()
+        categories = self.word_manager.get_all_categories()
+        category_completer = WordCompleter(categories, ignore_case=True)
+
+        kb = KeyBindings()
+        @kb.add('c-n', filter=HasCompletions())
+        def _(event):
+            event.current_buffer.complete_next()
+
+        @kb.add('c-p', filter=HasCompletions())
+        def _(event):
+            event.current_buffer.complete_previous()
+
         check = True
+        style = Style.from_dict({
+            'prompt': '#9eff6e',
+            'prompt-sign': 'white',
+        })
         while check:
-            category = self.process_command(prompt, run_specific=False)
+            category = prompt(
+                [('class:prompt', prompt_text), ('class:prompt-sign', ' > ')],
+                style=style,
+                completer=category_completer,
+                complete_while_typing=True,
+                key_bindings=kb,
+            ).strip()
+            is_command, action, args = self.parse_command(category, None)
+            if is_command:
+                self.handle_specific_action(action, args)
+                continue
+            
             if not category or self.word_manager.is_category_available(category):
                 if change_when_empty or category:
                     self.set_category(category)
@@ -334,12 +370,6 @@ class WordsTutor(BaseWordApp):
             console.print(f"Wrong mode: {mode}")
 
     def set_category(self, category:str) -> None:
-        # include_mastered = False
-        # if category.endswith(" --full"):
-        #     category = category[:-7].strip()
-        #     include_mastered = True
-        
-        # self.include_mastered = include_mastered
         self.category = category if category else None
         self.obsidian.find_file(self.category)
         self.available_words = self.word_manager.fetch_words(self.category)
