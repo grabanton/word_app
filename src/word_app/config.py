@@ -40,6 +40,9 @@ class Config:
     def get_database_path(self):
         return self._resolve_path(self.config['database']['path'])
 
+    def get_obsidian_config(self):
+        return self.config['obsidian']
+
     def get_prompt_path(self, prompt_name):
         base_path = self.config['llm']['prompts']['system']['base_path']
         file_name = self.config['llm']['prompts']['system']['files'].get(prompt_name)
@@ -61,3 +64,6 @@ def get_prompt_path(prompt_name) -> str:
 
 def get_voice_config() -> Dict:
     return config.get_voice_config()
+
+def get_obsidian_config() -> Dict:
+    return config.get_obsidian_config()

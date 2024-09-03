@@ -1,16 +1,16 @@
+import re
 import random
 from pprint import pprint
 from typing import Tuple, List, Dict, Generator, Optional
 from rich.console import Console
 from rich.layout import Layout
 from rich.live import Live
-import re
+from math import floor
 
 from .word_manager import WordManager, Word, IrregularVerb, GrammarTheme, STATES
 from .ui_manager import UIManager
 from .llm import Teacher
-from ..utils import Voice
-
+from ..utils import Voice, Obsidian
 
 ROBOT_EMOJI = "\U0001F916"
 console = Console()
@@ -298,6 +298,7 @@ class WordsTutor(BaseWordApp):
         self.category = ""
         self._specific_command_handlers = self._get_specific_command_handlers()
         self.include_mastered = False
+        self.obsidian = Obsidian()
 
     def _get_specific_command_handlers(self) -> Dict:
         return {
@@ -340,6 +341,7 @@ class WordsTutor(BaseWordApp):
         
         # self.include_mastered = include_mastered
         self.category = category if category else None
+        self.obsidian.find_file(self.category)
         self.available_words = self.word_manager.fetch_words(self.category)
         self.used_words.clear()
 
@@ -468,6 +470,10 @@ class WordsTutor(BaseWordApp):
                 check = self.process_command("[white]Would you like to chat about this word? (y/n):", run_specific=False)
                 if check.lower() == "y":
                     check = self.chat_mode(word.word)
+
+        state = self.word_manager.category_average(self.category)
+        status = STATES[floor(state)]
+        self.obsidian.update_state(score=state, status=status)
 
     def print_training_stats(self, category: str = None) -> None:
         self.ui_manager.show_words_stats(console, self.word_manager, category)
