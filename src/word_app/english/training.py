@@ -327,7 +327,7 @@ class WordsTutor(BaseWordApp):
     def prompt_to_set_category(self, prompt_text:str='Category', change_when_empty:bool=True) -> None:
         self.print_categories()
         categories = self.word_manager.get_all_categories()
-        category_completer = WordCompleter(categories, ignore_case=True)
+        category_completer = WordCompleter(sorted(categories,reverse=True), ignore_case=True)
 
         kb = KeyBindings()
         @kb.add('c-n', filter=HasCompletions())
