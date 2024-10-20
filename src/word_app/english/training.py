@@ -300,6 +300,9 @@ class WordsTutor(BaseWordApp):
         super().__init__()
         self.used_words = set()
         self.available_words = []
+        self.current_word_number = 0
+        self.unsuccessful_words_count = 0
+        self.successful_words_count = 0
         self.category = ""
         self._specific_command_handlers = self._get_specific_command_handlers()
         self.include_mastered = False
@@ -373,6 +376,9 @@ class WordsTutor(BaseWordApp):
         self.category = category if category else None
         self.obsidian.find_file(self.category)
         self.available_words = self.word_manager.fetch_words(self.category)
+        self.current_word_number = 0
+        self.unsuccessful_words_count = 0
+        self.successful_words_count = 0
         self.used_words.clear()
 
     def start_training(self, *args) -> Optional[str]:
@@ -388,6 +394,8 @@ class WordsTutor(BaseWordApp):
                     change_when_empty=False,
                 )
                 continue
+
+            self.current_word_number = (self.current_word_number + 1) % len(self.available_words)
 
             self.start_game()
             riddle = self.word_riddle(word)
@@ -478,6 +486,7 @@ class WordsTutor(BaseWordApp):
 
     def grade_guess(self, word: Word, guess: str) -> Optional[str]:
         if guess.strip().lower() == word.word.lower():
+            self.successful_words_count += 1
             if self.auto_speak:
                 self.speak(f'Correct! Right answer is "{word.word}"')
             console.print(f'{ROBOT_EMOJI} [green]Correct!\n [white]Right answer is "{word.word}".\n')
@@ -494,8 +503,10 @@ class WordsTutor(BaseWordApp):
 
             if full_grade.replace(ROBOT_EMOJI,'').strip().lower().startswith("correct"):
                 console.print("Moving to the next word.\n")
+                self.successful_words_count += 1
                 self.word_manager.process_word_state(word.word, 1)
             else:
+                self.unsuccessful_words_count += 1
                 self.word_manager.process_word_state(word.word, -1)
                 check = self.process_command("[white]Would you like to chat about this word? (y/n):", run_specific=False)
                 if check.lower() == "y":
@@ -507,7 +518,9 @@ class WordsTutor(BaseWordApp):
 
     def print_training_stats(self, category: str = None) -> None:
         self.ui_manager.show_words_stats(console, self.word_manager, category)
-
+        msg = f"{self.current_word_number}/{len(self.available_words)} "
+        msg += f"[white]([red] {self.unsuccessful_words_count} [white]| [green]{self.successful_words_count}[white] )\n"
+        console.print(msg)
 
 class VerbsTutor(BaseWordApp):
     """Class for irregular verb mode of the application."""

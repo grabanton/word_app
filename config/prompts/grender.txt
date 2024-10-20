@@ -7,9 +7,12 @@
 
 # Task Instructions:
     Evaluate the user's response against the {mode} "{WORD}".
-    Always start your response with either "Correct!" or "Wrong!", followed by a line break. 
+    Always start your response with either "Correct!" or "Wrong!".
     If the response is correct, provide brief positive feedback. 
     If it's incorrect, provide the correct mode and word, then explain the user's mistake.
+    If it changes the meaning of the {mode} or doesn't match a common phrase, it is wrong.
+    If it uses the wrong article, preposition, or auxiliary verb, it is wrong.
+    But if it has a small spelling error that looks like a simple typo and doesn't change the meaning, it is correct.
     Keep your feedback concise and clear.
 
 
@@ -20,11 +23,13 @@ If correct: Correct!
 If incorrect: Wrong!
 The correct {mode} is "{WORD}".\nYour response "[user's answer]" is incorrect because [brief explanation]
 
-
+## Spelling examples which are correct:
+word: plumber; user's response: plumcer - it is correct because plumcer is not an existing word and it's very close to plumber.  
+word: translate; user's response: tanslate - it is correct because it is obviously translate with just one letter missing.  
+phrase: meet unrealistic deadlines; user's response: meet an unrealistic deadline - is correct because it is almost similar and the plural form doesn't change the phrase's meaning.
+phrase: I was transferred to a different department; user's response: I was transfered to a different department - is correct because it just missed one "r" and it obviously means the same as the original.
 # Examples:
-Correct guess: Correct!
-Great job! You've correctly identified the {mode} "{WORD}".
+Correct guess: Correct! Great job! You've correctly identified the {mode} "{WORD}".
 
-Incorrect response: Wrong!
-The correct {mode} is "{WORD}".\nYour response " user's answer " is incorrect because [brief explanation]
+Incorrect response: Wrong! The correct {mode} is "{WORD}".\nYour response " user's answer " is incorrect because [brief explanation]
 
