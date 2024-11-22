@@ -4,6 +4,7 @@ import io
 import logging
 import pygame
 import threading
+import random
 from ..config import get_voice_config
 
 class Voice:
@@ -15,7 +16,9 @@ class Voice:
         config = self._get_config()
         base_url = config['base_url']
         api_key = config['api_key']
-        self.voice = config['voice']
+        self.voice_list = ["alloy", "echo", "fable", "onyx", "nova", "shimmer"]
+        self.voice_mode = config['voice']
+        self.voice = ''
         self.model = config['model']
         self.sample_rate = config['audio']['sample_rate']
         self.buffer_size = config['audio']['buffer_size']
@@ -28,6 +31,14 @@ class Voice:
 
     def _get_config(self):
         return get_voice_config()
+
+    def pick_voice(self) -> str:
+        result = self.voice_mode
+        if self.voice_mode == 'random_word':
+            result = random.choice(self.voice_list)
+        elif self.voice_mode == 'random_session' and not self.voice:
+            result = self.voice
+        return result
 
     def play_audio(self, audio_data: bytes) -> None:
         pygame.mixer.init(frequency=self.sample_rate, buffer=self.buffer_size)
@@ -66,7 +77,7 @@ class Voice:
             logging.debug("Sending text to TTS server")
             with self.client.audio.speech.with_streaming_response.create(
                 model=self.model,
-                voice=self.voice,
+                voice=self.pick_voice(),
                 input=text
             ) as response:
                 logging.debug("Received response from TTS server")

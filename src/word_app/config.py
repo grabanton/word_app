@@ -43,6 +43,9 @@ class Config:
     def get_obsidian_config(self):
         return self.config['obsidian']
 
+    def get_streak_threshold(self) -> int:
+        return self.config['app']['streak_threshold']
+
     def get_prompt_path(self, prompt_name):
         base_path = self.config['llm']['prompts']['system']['base_path']
         file_name = self.config['llm']['prompts']['system']['files'].get(prompt_name)
@@ -67,3 +70,6 @@ def get_voice_config() -> Dict:
 
 def get_obsidian_config() -> Dict:
     return config.get_obsidian_config()
+
+def get_streak_threshold() -> int:
+    return config.get_streak_threshold()

@@ -183,6 +183,25 @@ class UIManager:
         console.print(table)
 
     @staticmethod
+    def show_training_stats(console: Console, current_number: int, total_number: int, unsuccessful_count: int, successful_count: int, todays_words: int) -> None:
+        msg = f"{current_number}/{total_number} "
+        msg += f"[white]([red] {unsuccessful_count} [white]| [green]{successful_count}[white] ) [blue]{todays_words}[/blue]\n"
+        console.print(msg)
+
+    @staticmethod
+    def show_streak(console: Console, streak: int, today_is_active: bool = False) -> None:
+        emoji = "🔥"
+        msg = "\n"
+        if streak == 1:
+            msg += f"Good start! {emoji}"
+        else:
+            msg += f"You are active for [green]{streak}[/green] days in a row! "
+            msg += "".join([emoji for _ in range(min(50, streak))])
+        if today_is_active:
+            msg += f"\n[green]Good job! You were active today![/green]"
+        console.print(msg)
+
+    @staticmethod
     def show_all_words(console: Console, manager: WordManager, category:str = None, word_count:int = -1) -> None:
         header = f"{'Word':<80} {'Category':<20} {'State'}"
         words = manager.fetch_words(category=category)

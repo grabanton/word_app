@@ -13,6 +13,7 @@
     If it changes the meaning of the {mode} or doesn't match a common phrase, it is wrong.
     If it uses the wrong article, preposition, or auxiliary verb, it is wrong.
     But if it has a small spelling error that looks like a simple typo and doesn't change the meaning, it is correct.
+    If it's an obvious spelling error and the resulting word does not exist, let's think it is correct.
     Keep your feedback concise and clear.
 
 

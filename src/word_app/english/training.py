@@ -1,7 +1,7 @@
 import re
 import random
 from pprint import pprint
-from typing import Tuple, List, Dict, Generator, Optional
+from typing import Tuple, List, Dict, Generator, Optional, TYPE_CHECKING
 from rich.console import Console
 from rich.layout import Layout
 from rich.live import Live
@@ -16,6 +16,9 @@ from .word_manager import WordManager, Word, IrregularVerb, GrammarTheme, STATES
 from .ui_manager import UIManager
 from .llm import Teacher
 from ..utils import Voice, Obsidian
+
+if TYPE_CHECKING:
+    from .training import WordsTutor
 
 ROBOT_EMOJI = "\U0001F916"
 console = Console()
@@ -303,6 +306,7 @@ class WordsTutor(BaseWordApp):
         self.current_word_number = 0
         self.unsuccessful_words_count = 0
         self.successful_words_count = 0
+        self.last_word_successful = False
         self.category = ""
         self._specific_command_handlers = self._get_specific_command_handlers()
         self.include_mastered = False
@@ -379,6 +383,7 @@ class WordsTutor(BaseWordApp):
         self.current_word_number = 0
         self.unsuccessful_words_count = 0
         self.successful_words_count = 0
+        self.last_word_successful = False
         self.used_words.clear()
 
     def start_training(self, *args) -> Optional[str]:
@@ -487,6 +492,7 @@ class WordsTutor(BaseWordApp):
     def grade_guess(self, word: Word, guess: str) -> Optional[str]:
         if guess.strip().lower() == word.word.lower():
             self.successful_words_count += 1
+            self.last_word_successful = True
             if self.auto_speak:
                 self.speak(f'Correct! Right answer is "{word.word}"')
             console.print(f'{ROBOT_EMOJI} [green]Correct!\n [white]Right answer is "{word.word}".\n')
@@ -504,9 +510,11 @@ class WordsTutor(BaseWordApp):
             if full_grade.replace(ROBOT_EMOJI,'').strip().lower().startswith("correct"):
                 console.print("Moving to the next word.\n")
                 self.successful_words_count += 1
+                self.last_word_successful = True
                 self.word_manager.process_word_state(word.word, 1)
             else:
                 self.unsuccessful_words_count += 1
+                self.last_word_successful = False
                 self.word_manager.process_word_state(word.word, -1)
                 check = self.process_command("[white]Would you like to chat about this word? (y/n):", run_specific=False)
                 if check.lower() == "y":
@@ -517,10 +525,21 @@ class WordsTutor(BaseWordApp):
         self.obsidian.update_state(score=state, status=status)
 
     def print_training_stats(self, category: str = None) -> None:
+        self.update_and_show_streak()
         self.ui_manager.show_words_stats(console, self.word_manager, category)
-        msg = f"{self.current_word_number}/{len(self.available_words)} "
-        msg += f"[white]([red] {self.unsuccessful_words_count} [white]| [green]{self.successful_words_count}[white] )\n"
-        console.print(msg)
+        self.ui_manager.show_training_stats(
+            console, 
+            current_number = self.current_word_number,
+            total_number = len(self.available_words),
+            unsuccessful_count = self.unsuccessful_words_count,
+            successful_count = self.successful_words_count,
+            todays_words = self.word_manager.get_todays_words(),
+        )
+    def update_and_show_streak(self) -> None:
+        if self.last_word_successful:
+            self.word_manager.update_streak()
+        streak, today_is_active = self.word_manager.get_streak()
+        self.ui_manager.show_streak(console, streak, today_is_active)
 
 class VerbsTutor(BaseWordApp):
     """Class for irregular verb mode of the application."""
@@ -726,3 +745,4 @@ class GrammarTutor(BaseWordApp):
                 continue
             answer = self.teacher.conversation(user_input, options=self.teacher.grammar_options)
             self.display_chat_answer(answer)
+

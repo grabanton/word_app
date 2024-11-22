@@ -2,7 +2,8 @@ import os
 import sqlite3
 from dataclasses import dataclass
 from typing import Optional, List
-from ..config import get_database_path
+from ..config import get_database_path, get_streak_threshold
+import datetime
 
 STATES = (
     'new',           
@@ -56,6 +57,7 @@ class WordManager:
     
     def _initialize(self) -> None:
         db_path = get_database_path()
+        self.streak_threshold = get_streak_threshold()
         self._ensure_db_directory_exists(db_path)
         self.conn: sqlite3.Connection = sqlite3.connect(db_path)
         self.cursor: sqlite3.Cursor = self.conn.cursor()
@@ -82,6 +84,10 @@ class WordManager:
         self.cursor.execute('''
             CREATE TABLE IF NOT EXISTS grammar_themes
             (name TEXT PRIMARY KEY, description TEXT)
+        ''')
+        self.cursor.execute('''
+            CREATE TABLE IF NOT EXISTS user_activity
+            (date TEXT PRIMARY KEY, successful_words INTEGER, streak INTEGER)
         ''')
 
     def _migrate_database(self) -> None:
@@ -258,3 +264,53 @@ class WordManager:
         """Fetch all unique categories from the database."""
         self.cursor.execute("SELECT DISTINCT category FROM words ORDER BY category")
         return [row[0] for row in self.cursor.fetchall() if row[0]]  # Exclude empty categories
+
+    def update_streak(self) -> None:
+        today = datetime.date.today().isoformat()
+        yesterday = (datetime.date.today() - datetime.timedelta(days=1)).isoformat()
+
+        self.cursor.execute("SELECT * FROM user_activity WHERE date = ?", (today,))
+        today_activity = self.cursor.fetchone()
+
+        self.cursor.execute("SELECT * FROM user_activity WHERE date = ?", (yesterday,))
+        yesterday_activity = self.cursor.fetchone()
+
+        yesterday_streak = 0 if not yesterday_activity else yesterday_activity[2]
+
+        if today_activity:
+            new_successful_words = today_activity[1] + 1
+            current_streak = today_activity[2]
+            if new_successful_words >= self.streak_threshold:
+                if current_streak == yesterday_streak:
+                    current_streak += 1
+            self.cursor.execute('''
+                UPDATE user_activity 
+                SET successful_words = ?, streak = ?
+                WHERE date = ?
+            ''', (new_successful_words, current_streak, today))
+        else:
+            if yesterday_activity:
+                current_streak = yesterday_streak 
+            else:
+                current_streak = 1
+            self.cursor.execute('''
+                INSERT INTO user_activity (date, successful_words, streak)
+                VALUES (?, ?, ?)
+            ''', (today, 1, current_streak))
+
+        self.conn.commit()
+
+    def get_streak(self) -> int:
+        today = datetime.date.today().isoformat()
+        self.cursor.execute("SELECT successful_words, streak FROM user_activity WHERE date = ?", (today,))
+        result = self.cursor.fetchone()
+        streak = result[1] if result else 0
+        today_is_active = False if not result else result[0] >= self.streak_threshold
+        return streak, today_is_active
+    
+    def get_todays_words(self) -> int:
+        today = datetime.date.today().isoformat()
+        self.cursor.execute("SELECT successful_words FROM user_activity WHERE date = ?", (today,))
+        result = self.cursor.fetchone()
+        return result[0] if result else 0
+
