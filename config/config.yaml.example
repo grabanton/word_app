@@ -3,8 +3,8 @@ version: 1.0
 llm:
   base_url: http://localhost:11434
   models:
-    main: llama3
-    translator: qwen2
+    main: llama3.1:latest
+    translator: llama3.1:latest
 
   prompts:
     system:
@@ -27,7 +27,7 @@ llm:
       explain:
         temperature: 0.5
       translate:
-        temperature: 0.3
+        temperature: 0.5
       conversation:
         temperature: 0.5
       riddle:
@@ -46,16 +46,20 @@ llm:
 database:
   path: ../.data/words_database.db
 
+obsidian:
+  english_dir: /path/to/folder/where/whords.md
+
 voice:
   base_url: http://localhost:8000/v1
   api_key: sk-111111111
   model: tts-1
-  voice: shimmer
+  voice: random_session # random_word, random_session, alloy, echo, fable, onyx, nova, shimmer
   audio:
-    sample_rate: 24000
+    sample_rate: 16000
     buffer_size: 512
     stream_chunk_size: 4096
 
 app:
+  streak_threshold: 30
   debug: false
   log_level: INFO

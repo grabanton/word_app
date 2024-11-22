@@ -34,10 +34,9 @@ class Voice:
 
     def pick_voice(self) -> str:
         result = self.voice_mode
-        if self.voice_mode == 'random_word':
+        if ( self.voice_mode == 'random_word' ) or \
+           ( self.voice_mode == 'random_session' and not self.voice ):
             result = random.choice(self.voice_list)
-        elif self.voice_mode == 'random_session' and not self.voice:
-            result = self.voice
         return result
 
     def play_audio(self, audio_data: bytes) -> None:
