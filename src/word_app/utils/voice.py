@@ -33,12 +33,12 @@ class Voice:
         return get_voice_config()
 
     def pick_voice(self) -> str:
-        result = self.voice_mode
         if ( self.voice_mode == 'random_word' ):
-            result = random.choice(self.voice_list)
+            self.voice = random.choice(self.voice_list)
         elif self.voice_mode == 'random_session' and not self.voice :
-            result = random.choice(self.voice_list)
-        return result
+            self.voice = random.choice(self.voice_list)
+        elif not self.voice:
+            self.voice = self.voice_mode
 
     def play_audio(self, audio_data: bytes) -> None:
         pygame.mixer.init(frequency=self.sample_rate, buffer=self.buffer_size)
@@ -75,9 +75,10 @@ class Voice:
     def _speak(self, text:str) -> None:
         try:
             logging.debug("Sending text to TTS server")
+            self.pick_voice()
             with self.client.audio.speech.with_streaming_response.create(
                 model=self.model,
-                voice=self.pick_voice(),
+                voice=self.voice,
                 input=text
             ) as response:
                 logging.debug("Received response from TTS server")
