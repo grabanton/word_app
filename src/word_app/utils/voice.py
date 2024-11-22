@@ -34,8 +34,9 @@ class Voice:
 
     def pick_voice(self) -> str:
         result = self.voice_mode
-        if ( self.voice_mode == 'random_word' ) or \
-           ( self.voice_mode == 'random_session' and not self.voice ):
+        if ( self.voice_mode == 'random_word' ):
+            result = random.choice(self.voice_list)
+        elif self.voice_mode == 'random_session' and not self.voice :
             result = random.choice(self.voice_list)
         return result
 
