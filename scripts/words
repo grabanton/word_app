@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Получаем полный путь к директории скрипта
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Переходим в корневую директорию проекта (на уровень выше scripts)
 cd "$SCRIPT_DIR/.."

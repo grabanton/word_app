@@ -1,5 +1,7 @@
 config/config.yaml
 *.pyc
 .data/*
-tests/*
 .vscode/settings.json
+.venv/
+.aider*
+.env

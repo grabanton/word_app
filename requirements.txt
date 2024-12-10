@@ -1,0 +1,10 @@
+ollama
+rich
+typer
+prompt-toolkit
+pyyaml
+openai
+pygame
+numpy
+librosa
+sounddevice
