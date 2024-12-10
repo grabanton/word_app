@@ -6,8 +6,11 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 # Переходим в корневую директорию проекта (на уровень выше scripts)
 cd "$SCRIPT_DIR/.."
 
-# Запускаем Python-скрипт через Poetry
-poetry run python -m src.word_app.main "$@"
+# Добавляем src директорию в PYTHONPATH
+export PYTHONPATH="$PWD/src:$PYTHONPATH"
+
+# Запускаем Python-скрипт через venv
+.venv/bin/python -m word_app.main "$@"
 
 # Возвращаемся в исходную директорию
 cd "$SCRIPT_DIR"
