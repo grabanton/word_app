@@ -1,10 +1,10 @@
-version: 1.0
-
 llm:
   base_url: http://localhost:11434
+  use_openai: true
+  openai_api_key: sk-yourKey
   models:
-    main: llama3.1:latest
-    translator: llama3.1:latest
+    main: gpt-4o-mini
+    translator: gpt-4o-mini
 
   prompts:
     system:

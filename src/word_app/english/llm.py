@@ -1,6 +1,6 @@
 from typing import Generator, Dict, Tuple
 import ollama
-import re
+import openai
 from ..config import get_llm_config, get_prompt_path
 from ..utils import Utils
 
@@ -12,7 +12,11 @@ class Teacher:
         self.config = get_llm_config()
         self.main_model = self.config['models']['main']
         self.translator_model = self.config['models']['translator']
-        self.client = ollama.Client(host=self.config['base_url'])
+        self.use_openai = self.config.get('use_openai', False)
+        if self.use_openai:
+            self.client = openai.OpenAI(api_key=self.config.get('openai_api_key'))
+        else:
+            self.client = ollama.Client(host=self.config['base_url'])
         self.stream = stream
 
         self.system_explain = self._load_prompt('explain')
@@ -50,13 +54,32 @@ class Teacher:
     def text_gen(self, prompt: str, model: str = '', options: Dict = DEFAULT_OPTIONS, system: str = '') -> Generator[dict, None, None]:
         """Generate a text. Completion mode."""
         the_model = model if model else self.main_model
-        return self.client.generate(
-            model=the_model,
-            system=system,
-            prompt=prompt,
-            options=options,
-            stream=self.stream
-        )
+        
+        if self.use_openai:
+            messages = [
+                {"role": "system", "content": system},
+                {"role": "user", "content": prompt}
+            ]
+            response = self.client.chat.completions.create(
+                model=the_model,
+                messages=messages,
+                stream=self.stream,
+                **options
+            )
+            if self.stream:
+                for chunk in response:
+                    if chunk.choices[0].delta.content is not None:
+                        yield {"response": chunk.choices[0].delta.content}
+            else:
+                yield {"response": response.choices[0].message.content}
+        else:
+            return self.client.generate(
+                model=the_model,
+                system=system,
+                prompt=prompt,
+                options=options,
+                stream=self.stream
+            )
     
     def init_convrsation(self, word: str) -> None:
         """Append the initial system message to the chat history."""
@@ -95,12 +118,27 @@ class Teacher:
     def conversation(self, prompt: str, options: Dict=DEFAULT_OPTIONS) -> Generator[dict, None, None]:
         """Append the user's message to the chat history and generate a response. Chat mode."""
         self.chat_history.append({'role': 'user', 'content': prompt})
-        return self.client.chat(
-            model=self.main_model,
-            messages=self.chat_history,
-            options=options,
-            stream=self.stream
-        )
+        
+        if self.use_openai:
+            response = self.client.chat.completions.create(
+                model=self.main_model,
+                messages=self.chat_history,
+                stream=self.stream,
+                **options
+            )
+            if self.stream:
+                for chunk in response:
+                    if chunk.choices[0].delta.content is not None:
+                        yield {"response": chunk.choices[0].delta.content}
+            else:
+                yield {"response": response.choices[0].message.content}
+        else:
+            return self.client.chat(
+                model=self.main_model,
+                messages=self.chat_history,
+                options=options,
+                stream=self.stream
+            )
 
     def explainer(self, word: str) -> Generator[dict, None, None]:
         """Generate an explanation for a word. Using a main model."""

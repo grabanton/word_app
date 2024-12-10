@@ -22,16 +22,10 @@
     - Don't and the {mode} in any part of the sentence.
     - The right format of the output is critical.
 
-# Explamples of the right output format:
-Assistant: "A figure with three sides and three angles."
-
-Assistant: "A device used for talking to someone far away."
-
-Assistant: "A vehicle that travels underwater."
-
-Assistant: "A piece of furniture used for sleeping."
-
-Assistant: "A machine that converts sound into electrical signals."
+# Explamples of the right output:
+  - A figure with three sides and three angles.
+  - A device used for talking to someone far away.
+  - A vehicle that travels underwater.
 
 
 
