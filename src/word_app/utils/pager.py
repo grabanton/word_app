@@ -80,15 +80,17 @@ class MyPager:
         if not self.filter_text:
             self.filtered_lines = self.lines.copy()
         else:
-            # Keep track of separator lines and their positions
             filtered = []
-            for i, line in enumerate(self.lines):
-                if line.strip().startswith('---'):  # It's a separator
-                    # Add separator if previous line was included
-                    if filtered and i > 0 and any(self.filter_text.lower() in l.lower() for l in [self.lines[i-1], self.lines[i+1] if i+1 < len(self.lines) else '']):
-                        filtered.append(line)
-                elif self.filter_text.lower() in line.lower():
+            i = 0
+            while i < len(self.lines):
+                line = self.lines[i]
+                if self.filter_text.lower() in line.lower():
                     filtered.append(line)
+                    # Add separator if next line is a separator
+                    if i + 1 < len(self.lines) and self.lines[i + 1].strip().startswith('---'):
+                        filtered.append(self.lines[i + 1])
+                        i += 1  # Skip the separator in next iteration
+                i += 1
             self.filtered_lines = filtered
 
 def format_with_dashes(word: str, length: int) -> str:
