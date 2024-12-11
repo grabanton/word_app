@@ -14,9 +14,9 @@ class MyPager:
 
     def _update_header(self):
         console = Console(record=True, width=120)
-        header_content = self.header + "\n"  # Add empty line after title
+        header_content = self.header  # Add empty line after title
         if self.filter_mode:
-            header_content += f"Filter: {self.filter_text}"
+            header_content += f"\n\nFilter: {self.filter_text}"
         header_panel = Panel(header_content, width=console.width-1)
         console.print(header_panel)
         self.rendered_header = console.export_text().strip().split('\n')
@@ -29,7 +29,7 @@ class MyPager:
             stdscr.addstr(i, 0, line[:width])
 
         header_height = len(self.rendered_header)
-        avail_height = height - header_height - 1
+        avail_height = height - header_height
 
         for idx, line in enumerate(self.filtered_lines[start_line:start_line+avail_height]):
             stdscr.addstr(len(self.rendered_header) + idx, 0, line[:width-1])
