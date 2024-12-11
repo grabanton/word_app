@@ -14,9 +14,9 @@ class MyPager:
 
     def _update_header(self):
         console = Console(record=True, width=120)
-        header_content = self.header
+        header_content = self.header + "\n"  # Add empty line after title
         if self.filter_mode:
-            header_content += f"\nFilter: {self.filter_text}"
+            header_content += f"Filter: {self.filter_text}"
         header_panel = Panel(header_content, width=console.width-1)
         console.print(header_panel)
         self.rendered_header = console.export_text().strip().split('\n')
@@ -80,10 +80,16 @@ class MyPager:
         if not self.filter_text:
             self.filtered_lines = self.lines.copy()
         else:
-            self.filtered_lines = [
-                line for line in self.lines 
-                if self.filter_text.lower() in line.lower()
-            ]
+            # Keep track of separator lines and their positions
+            filtered = []
+            for i, line in enumerate(self.lines):
+                if line.strip().startswith('---'):  # It's a separator
+                    # Add separator if previous line was included
+                    if filtered and i > 0 and any(self.filter_text.lower() in l.lower() for l in [self.lines[i-1], self.lines[i+1] if i+1 < len(self.lines) else '']):
+                        filtered.append(line)
+                elif self.filter_text.lower() in line.lower():
+                    filtered.append(line)
+            self.filtered_lines = filtered
 
 def format_with_dashes(word: str, length: int) -> str:
     return f"{word:<{length}}".replace(" ", "-")
