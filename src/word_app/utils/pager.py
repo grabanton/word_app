@@ -10,9 +10,14 @@ class MyPager:
         self.filtered_lines = lines.copy()
         self.filter_mode = False
         self.filter_text = ""
-        
+        self._update_header()
+
+    def _update_header(self):
         console = Console(record=True, width=120)
-        header_panel = Panel(self.header, width=console.width-1)
+        header_content = self.header
+        if self.filter_mode:
+            header_content += f"\nFilter: {self.filter_text}"
+        header_panel = Panel(header_content, width=console.width-1)
         console.print(header_panel)
         self.rendered_header = console.export_text().strip().split('\n')
 
@@ -23,13 +28,7 @@ class MyPager:
         for i, line in enumerate(self.rendered_header):
             stdscr.addstr(i, 0, line[:width])
 
-        # Show filter status if in filter mode
         header_height = len(self.rendered_header)
-        if self.filter_mode:
-            filter_status = f"Filter: {self.filter_text}"
-            stdscr.addstr(header_height, 0, filter_status[:width-1])
-            header_height += 1
-
         avail_height = height - header_height - 1
 
         for idx, line in enumerate(self.filtered_lines[start_line:start_line+avail_height]):
@@ -50,20 +49,24 @@ class MyPager:
                     self.filter_mode = False
                     self.filter_text = ""
                     self.filtered_lines = self.lines.copy()
+                    self._update_header()
                     start_line = 0
                 elif key == curses.KEY_BACKSPACE or key == 127:
                     self.filter_text = self.filter_text[:-1]
                     self._apply_filter()
+                    self._update_header()
                     start_line = 0
                 elif 32 <= key <= 126:  # Printable characters
                     self.filter_text += chr(key)
                     self._apply_filter()
+                    self._update_header()
                     start_line = 0
             else:
                 if key == ord('q'):
                     return
                 elif key == ord('f'):
                     self.filter_mode = True
+                    self._update_header()
                     start_line = 0
                 elif ( key == curses.KEY_UP or key == ord('k') ) and start_line > 0:
                     start_line -= 1
